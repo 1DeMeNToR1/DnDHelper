@@ -1,0 +1,461 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="windowModality">
+   <enum>Qt::NonModal</enum>
+  </property>
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1100</width>
+    <height>900</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>1100</width>
+    <height>900</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>1100</width>
+    <height>900</height>
+   </size>
+  </property>
+  <property name="sizeIncrement">
+   <size>
+    <width>0</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="baseSize">
+   <size>
+    <width>1100</width>
+    <height>900</height>
+   </size>
+  </property>
+  <property name="font">
+   <font>
+    <family>Source Code Pro Semibold</family>
+    <strikeout>false</strikeout>
+   </font>
+  </property>
+  <property name="cursor">
+   <cursorShape>ArrowCursor</cursorShape>
+  </property>
+  <property name="windowTitle">
+   <string>D&amp;D Helper(alphatest 0.4)</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>../../../../.designer/backup/old/icon.ico</normaloff>../../../../.designer/backup/old/icon.ico</iconset>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: url(1.jpg)</string>
+  </property>
+  <property name="tabShape">
+   <enum>QTabWidget::Rounded</enum>
+  </property>
+  <property name="dockOptions">
+   <set>QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks</set>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QTabWidget" name="characters_tab">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>1101</width>
+      <height>881</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="font">
+     <font>
+      <stylestrategy>PreferAntialias</stylestrategy>
+     </font>
+    </property>
+    <property name="acceptDrops">
+     <bool>false</bool>
+    </property>
+    <property name="autoFillBackground">
+     <bool>true</bool>
+    </property>
+    <property name="styleSheet">
+     <string notr="true"/>
+    </property>
+    <property name="inputMethodHints">
+     <set>Qt::ImhNone</set>
+    </property>
+    <property name="tabPosition">
+     <enum>QTabWidget::North</enum>
+    </property>
+    <property name="tabShape">
+     <enum>QTabWidget::Triangular</enum>
+    </property>
+    <property name="currentIndex">
+     <number>-1</number>
+    </property>
+    <property name="elideMode">
+     <enum>Qt::ElideNone</enum>
+    </property>
+    <property name="documentMode">
+     <bool>false</bool>
+    </property>
+    <property name="tabsClosable">
+     <bool>true</bool>
+    </property>
+    <property name="movable">
+     <bool>true</bool>
+    </property>
+    <property name="tabBarAutoHide">
+     <bool>false</bool>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1100</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>Source Code Pro Semibold</family>
+     <strikeout>false</strikeout>
+    </font>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LeftToRight</enum>
+   </property>
+   <property name="autoFillBackground">
+    <bool>true</bool>
+   </property>
+   <property name="defaultUp">
+    <bool>false</bool>
+   </property>
+   <widget class="QMenu" name="character_menu">
+    <property name="title">
+     <string>Персонаж</string>
+    </property>
+    <addaction name="add_character"/>
+    <addaction name="load_character"/>
+    <addaction name="save_character"/>
+   </widget>
+   <widget class="QMenu" name="book_menu">
+    <property name="title">
+     <string>Книга</string>
+    </property>
+    <addaction name="master_book"/>
+    <addaction name="study_book"/>
+   </widget>
+   <widget class="QMenu" name="instruments_menu">
+    <property name="title">
+     <string>Инструменты</string>
+    </property>
+    <widget class="QMenu" name="instr_character">
+     <property name="title">
+      <string>Создание персонажа/npc</string>
+     </property>
+     <widget class="QMenu" name="name_generator">
+      <property name="title">
+       <string>Генератор имен</string>
+      </property>
+      <addaction name="actionAutoNAME_AutoREALM_name_generator"/>
+      <addaction name="actiontentaculus_ru_name_generator"/>
+     </widget>
+     <widget class="QMenu" name="bandit_name_generator">
+      <property name="title">
+       <string>Генератор имен бандитов</string>
+      </property>
+      <addaction name="actionstormtower_ru_bandit_name_generator"/>
+     </widget>
+     <widget class="QMenu" name="harakter_generator">
+      <property name="title">
+       <string>Генератор характера</string>
+      </property>
+      <addaction name="actionrandomall_ru_harakter_generator"/>
+     </widget>
+     <widget class="QMenu" name="country_name_generator">
+      <property name="title">
+       <string>Генератор названия станы</string>
+      </property>
+      <addaction name="actionrandomall_ru_county_name_generator"/>
+     </widget>
+     <addaction name="name_generator"/>
+     <addaction name="bandit_name_generator"/>
+     <addaction name="harakter_generator"/>
+     <addaction name="country_name_generator"/>
+     <addaction name="actionrpgtinker_com_country_name_generator"/>
+    </widget>
+    <widget class="QMenu" name="make_location">
+     <property name="title">
+      <string>Создание локаций</string>
+     </property>
+     <widget class="QMenu" name="home_generator">
+      <property name="title">
+       <string>Генератор Таверн</string>
+      </property>
+      <addaction name="actionstormtower_ru_home_generator"/>
+     </widget>
+     <widget class="QMenu" name="city_generator">
+      <property name="title">
+       <string>Генератор карты города</string>
+      </property>
+      <addaction name="actionwatabou_itch_io_city_generator"/>
+     </widget>
+     <addaction name="home_generator"/>
+     <addaction name="city_generator"/>
+     <addaction name="actionCampaign_Cartographer_3_CC3_city_generator"/>
+     <addaction name="actionAutoREALM_city_generator"/>
+     <addaction name="actionpyromancers_com_city_generator"/>
+    </widget>
+    <addaction name="instr_character"/>
+    <addaction name="make_location"/>
+    <addaction name="sounds"/>
+   </widget>
+   <widget class="QMenu" name="usefull_menu">
+    <property name="title">
+     <string>Бестиарий/Предметы/Заклинания</string>
+    </property>
+    <widget class="QMenu" name="bestiary">
+     <property name="title">
+      <string>Бестиарий</string>
+     </property>
+     <addaction name="actiondungeon_su_bestiary"/>
+     <addaction name="actiontentaculus_ru_bestiary"/>
+    </widget>
+    <widget class="QMenu" name="items">
+     <property name="title">
+      <string>Предметы</string>
+     </property>
+     <widget class="QMenu" name="magic_items">
+      <property name="title">
+       <string>Маг. Предметы</string>
+      </property>
+      <addaction name="actiondungeon_su_magic_items"/>
+      <addaction name="actiontentaculus_ru_magic_items"/>
+     </widget>
+     <widget class="QMenu" name="normal_items">
+      <property name="title">
+       <string>Обычное оружие</string>
+      </property>
+      <addaction name="actiondungeon_su_normal_items"/>
+      <addaction name="actiondnd5_club_normal_items"/>
+     </widget>
+     <addaction name="magic_items"/>
+     <addaction name="normal_items"/>
+    </widget>
+    <widget class="QMenu" name="magic">
+     <property name="title">
+      <string>Заклинания</string>
+     </property>
+     <addaction name="actiondungeon_su_magic"/>
+     <addaction name="actiontentaculus_ru_magic"/>
+    </widget>
+    <addaction name="bestiary"/>
+    <addaction name="items"/>
+    <addaction name="magic"/>
+   </widget>
+   <widget class="QMenu" name="cubes">
+    <property name="title">
+     <string>Кубики</string>
+    </property>
+    <addaction name="action1"/>
+   </widget>
+   <widget class="QMenu" name="configs">
+    <property name="title">
+     <string>Настройки</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="vk_group">
+    <property name="title">
+     <string>Вк группа</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="help">
+    <property name="tearOffEnabled">
+     <bool>false</bool>
+    </property>
+    <property name="title">
+     <string>Помощь</string>
+    </property>
+   </widget>
+   <addaction name="character_menu"/>
+   <addaction name="book_menu"/>
+   <addaction name="instruments_menu"/>
+   <addaction name="usefull_menu"/>
+   <addaction name="cubes"/>
+   <addaction name="configs"/>
+   <addaction name="vk_group"/>
+   <addaction name="help"/>
+  </widget>
+  <action name="add_character">
+   <property name="text">
+    <string>Добавить</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="load_character">
+   <property name="text">
+    <string>Загрузить</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
+   </property>
+  </action>
+  <action name="save_character">
+   <property name="text">
+    <string>Сохранить всех</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="master_book">
+   <property name="text">
+    <string>Книга Мастера(offline)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+M</string>
+   </property>
+  </action>
+  <action name="study_book">
+   <property name="text">
+    <string>Книга Игрока(Offline)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
+   </property>
+  </action>
+  <action name="sounds">
+   <property name="text">
+    <string>Звуковое сопровождение</string>
+   </property>
+  </action>
+  <action name="actionrpgtinker_com_country_name_generator">
+   <property name="text">
+    <string>rpgtinker.com</string>
+   </property>
+  </action>
+  <action name="actionAutoNAME_AutoREALM_name_generator">
+   <property name="text">
+    <string>AutoNAME(AutoREALM)</string>
+   </property>
+  </action>
+  <action name="actiontentaculus_ru_name_generator">
+   <property name="text">
+    <string>tentaculus.ru</string>
+   </property>
+  </action>
+  <action name="actionstormtower_ru_bandit_name_generator">
+   <property name="text">
+    <string>stormtower.ru</string>
+   </property>
+  </action>
+  <action name="actionrandomall_ru_harakter_generator">
+   <property name="text">
+    <string>randomall.ru</string>
+   </property>
+  </action>
+  <action name="actionrandomall_ru_county_name_generator">
+   <property name="text">
+    <string>randomall.ru</string>
+   </property>
+  </action>
+  <action name="actionstormtower_ru_home_generator">
+   <property name="text">
+    <string>stormtower.ru(Описание)</string>
+   </property>
+  </action>
+  <action name="actionCampaign_Cartographer_3_CC3_city_generator">
+   <property name="text">
+    <string>Campaign Cartographer 3(CC3)</string>
+   </property>
+  </action>
+  <action name="actionAutoREALM_city_generator">
+   <property name="text">
+    <string>AutoREALM</string>
+   </property>
+  </action>
+  <action name="actionpyromancers_com_city_generator">
+   <property name="text">
+    <string>pyromancers.com</string>
+   </property>
+  </action>
+  <action name="actionwatabou_itch_io_city_generator">
+   <property name="text">
+    <string>watabou.itch.io</string>
+   </property>
+  </action>
+  <action name="actiondungeon_su_bestiary">
+   <property name="text">
+    <string>dungeon.su</string>
+   </property>
+  </action>
+  <action name="actiontentaculus_ru_bestiary">
+   <property name="text">
+    <string>tentaculus.ru</string>
+   </property>
+  </action>
+  <action name="actiondungeon_su_magic_items">
+   <property name="text">
+    <string>dungeon.su</string>
+   </property>
+  </action>
+  <action name="actiontentaculus_ru_magic_items">
+   <property name="text">
+    <string>tentaculus.ru</string>
+   </property>
+  </action>
+  <action name="actiondungeon_su_normal_items">
+   <property name="text">
+    <string>dungeon.su</string>
+   </property>
+  </action>
+  <action name="actiondnd5_club_normal_items">
+   <property name="text">
+    <string>dnd5.club</string>
+   </property>
+  </action>
+  <action name="actiondungeon_su_magic">
+   <property name="text">
+    <string>dungeon.su</string>
+   </property>
+  </action>
+  <action name="actiontentaculus_ru_magic">
+   <property name="text">
+    <string>tentaculus.ru</string>
+   </property>
+  </action>
+  <action name="action1">
+   <property name="text">
+    <string>1</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

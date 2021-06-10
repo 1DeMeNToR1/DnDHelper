@@ -1,61 +1,617 @@
 import sys
+from PyQt5 import QtCore, QtGui, QtWidgets, Qt, uic
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+import traceback
+import time
+from threading import Thread
+import os.path
+import random
+import json
 
-class Test(QWidget):
+Form, _ = uic.loadUiType('configs\\ui\\ui.ui')
+magic_list, _ = uic.loadUiType('configs\\ui\\magic_list.ui')
+invent_list, _ = uic.loadUiType('configs\\ui\\inventory_list.ui')
+create_pers, _ = uic.loadUiType('configs\\ui\\create_new_persn.ui')
+transfer_pers, _ = uic.loadUiType('configs\\ui\\transfer_pers.ui')
+
+tab_list = {}
+
+def log_uncaught_exceptions(ex_cls, ex, tb): #error catcher
+    text = '{}: {}:\n'.format(ex_cls.__name__, ex)
+    text += ''.join(traceback.format_tb(tb))
+    print(text)
+    QtWidgets.QMessageBox.critical(None, 'Error', text)
+    sys.exit()
+sys.excepthook = log_uncaught_exceptions
+
+class win_inventory(QMainWindow, invent_list):
+    def __init__(self, parent=None):
+        super().__init__(parent, QtCore.Qt.Window)
+        self.parent = parent
+        self.setupUi(self)
+        self.denide_add_invent.clicked.connect(lambda: self.close())
+        self.access_add_invent.clicked.connect(lambda: self.access_add_item(parent))
+        thread_inventory = Thread(target=self.check_inventory_base, daemon=True)
+        print(thread_inventory.is_alive())
+        if thread_inventory.is_alive() == False:
+            thread_inventory.start()
+
+    def close(self):
+        #thread.stop()
+        self.hide()
+
+    def check_inventory_base(self):
+        print("spell_base_f starts")
+        while True:
+            try:
+                add_item_field_out = self.add_item_field.text()
+                file_path = "configs\\items\\" + add_item_field_out + ".txt"
+                if os.path.exists(file_path) == True:
+                    self.invent_indicator.setStyleSheet("background-color: lightgreen")
+                    self.invent_indicator.setText("Предмет уже есть в БД")
+                time.sleep(1.5)
+            except Exception:
+                print("error in thread")
+
+    def access_add_item(self, parent):
+        add_item_field_out = self.add_item_field.text()
+        wher_it_be_field_out = self.wher_it_be_field.currentText()
+        quality_field_out = self.quality_field.text()
+        source_of_item_out = self.source_of_item.text()
+        description_of_item_field = self.description_of_item_field.toPlainText()
+
+        codes = {"В снаряжено": "on_person_list", "В инвентарь": "in_inventory_list", "В умения. особенности, навыки": "can_have_invent_list", "В спец предметы": "spechial_invent_list"}
+        l = codes.get(wher_it_be_field_out)
+
+        file_path = "configs\\spells\\" + add_item_field_out + ".txt"
+        if os.path.exists(file_path) == True:
+            file = open(file_path, "r")
+            lines = file.read().split(" splitter ")
+            wher_it_be_field_out = lines[1]
+
+        if "\n" in add_item_field_out:
+            add_item_field_out = add_item_field_out.split("\n")[0]
+            path = "configs\\items\\" + add_item_field_out + ".txt"
+        else:
+            path = "configs\\items\\" + add_item_field_out + ".txt"
+        lines = [add_item_field_out, wher_it_be_field_out, quality_field_out, source_of_item_out, description_of_item_field]
+        with open(path, "w") as file:
+            for line in lines:
+                print(line)
+                if line == "":
+                    line = "Не указано."
+                file.write(" splitter " + str(line) + " splitter ")
+
+        if l == "on_person_list":
+            curent = parent.on_person_list.currentRow()
+            parent.on_person_list.takeItem(int(curent))
+            parent.on_person_list.addItem(str(add_item_field_out))
+        if l == "in_inventory_list":
+            curent = parent.in_inventory_list.currentRow()
+            parent.in_inventory_list.takeItem(int(curent))
+            parent.in_inventory_list.addItem(str(add_item_field_out))
+        if l == "can_have_invent_list":
+            curent = parent.can_have_invent_list.currentRow()
+            parent.can_have_invent_list.takeItem(int(curent))
+            parent.can_have_invent_list.addItem(str(add_item_field_out))
+        if l == "spechial_invent_list":
+            curent = parent.spechial_invent_list.currentRow()
+            parent.spechial_invent_list.takeItem(int(curent))
+            parent.spechial_invent_list.addItem(str(add_item_field_out))
+
+        self.close()
+
+
+#Окно добавление заклинаний
+class win_spell(QMainWindow, magic_list):
+    def __init__(self, parent=None):
+        super().__init__(parent, QtCore.Qt.Window)
+        self.parent = parent
+        self.setupUi(self)
+        self.close_spell_button.clicked.connect(lambda: self.close())
+        self.add_spell_button.clicked.connect(lambda: self.access_add_spell(parent))
+        thread_spell = Thread(target=self.check_spell_base, daemon=True)
+        print(thread_spell.is_alive())
+        if thread_spell.is_alive() == False:
+            thread_spell.start()
+
+    def close(self):
+        self.hide()
+
+
+    def check_spell_base(self):
+        print("spell_base_f starts")
+        while True:
+            try:
+                name_of_spell_out = self.name_of_spell.text()
+                file_path = "configs\\spells\\" + name_of_spell_out + ".txt"
+                if os.path.exists(file_path) == True:
+                    self.spell_indicator.setStyleSheet("background-color: lightgreen")
+                    self.spell_indicator.setText("Заклинание уже есть в БД")
+                time.sleep(1.5)
+            except Exception:
+                print("error in thread")
+
+
+    def access_add_spell(self, parent):
+        name_of_spell_out = self.name_of_spell.text()
+        spell_lvl_out = self.spell_lvl.currentText()
+        school_of_spell_out = self.school_of_spell.text()
+        time_to_cast_out = self.time_to_cast.text()
+        distantion_out = self.distantion.text()
+        intems_to_spell_out = self.intems_to_spell.toPlainText()
+        spell_lives_out = self.spell_lives.text()
+        classes_cast_out = self.classes_cast.text()
+        source_of_spell = self.source_of_spell.text()
+        spells_descriptions_out = self.spells_descriptions.toPlainText()
+
+        codes = {"Заговор": "list_mag_lvl0", "1": "list_mag_lvl1", "2": "list_mag_lvl2", "3": "list_mag_lvl3",
+                 "4": "list_mag_lvl4", "5": "list_mag_lvl5", "6": "list_mag_lvl6", "7": "list_mag_lvl7",
+                 "8": "list_mag_lvl8", "9": "list_mag_lvl9"}
+        l = codes.get(spell_lvl_out)
+
+        file_path = "configs\\spells\\" + name_of_spell_out + ".txt"
+        if os.path.exists(file_path) == True:
+            file = open(file_path, "r")
+            lines = file.read().split(" splitter ")
+            spell_lvl_out = lines[1]
+
+        if "\n" in name_of_spell_out:
+            name_of_spell_out = name_of_spell_out.split("\n")[0]
+            print(name_of_spell_out)
+            path = "configs\\spells\\" + name_of_spell_out + ".txt"
+        else:
+            path = "configs\\spells\\"+name_of_spell_out+".txt"
+        lines = [name_of_spell_out, spell_lvl_out, school_of_spell_out, time_to_cast_out, distantion_out, intems_to_spell_out, spell_lives_out, classes_cast_out, source_of_spell, spells_descriptions_out]
+        with open(path, "w") as file:
+            for line in lines:
+                print(line)
+                if line == "":
+                    line = "Не указано."
+                file.write(" splitter "+str(line)+" splitter ")
+
+        if l == "list_mag_lvl0":
+            curent = parent.list_mag_lvl0.currentRow()
+            parent.list_mag_lvl0.takeItem(int(curent))
+            parent.list_mag_lvl0.addItem(str(name_of_spell_out))
+        if l == "list_mag_lvl1":
+            curent = parent.list_mag_lvl1.currentRow()
+            parent.list_mag_lvl1.takeItem(int(curent))
+            parent.list_mag_lvl1.addItem(str(name_of_spell_out))
+        if l == "list_mag_lvl2":
+            curent = parent.list_mag_lvl2.currentRow()
+            parent.list_mag_lvl2.takeItem(int(curent))
+            parent.list_mag_lvl2.addItem(str(name_of_spell_out))
+        if l == "list_mag_lvl3":
+            curent = parent.list_mag_lvl3.currentRow()
+            parent.list_mag_lvl3.takeItem(int(curent))
+            parent.list_mag_lvl3.addItem(str(name_of_spell_out))
+        if l == "list_mag_lvl4":
+            curent = parent.list_mag_lvl4.currentRow()
+            parent.list_mag_lvl4.takeItem(int(curent))
+            parent.list_mag_lvl4.addItem(str(name_of_spell_out))
+        if l == "list_mag_lvl5":
+            curent = parent.list_mag_lvl5.currentRow()
+            parent.list_mag_lvl5.takeItem(int(curent))
+            parent.list_mag_lvl5.addItem(str(name_of_spell_out))
+        if l == "list_mag_lvl6":
+            curent = parent.list_mag_lvl6.currentRow()
+            parent.list_mag_lvl6.takeItem(int(curent))
+            parent.list_mag_lvl6.addItem(str(name_of_spell_out))
+        if l == "list_mag_lvl7":
+            curent = parent.list_mag_lvl7.currentRow()
+            parent.list_mag_lvl7.takeItem(int(curent))
+            parent.list_mag_lvl7.addItem(str(name_of_spell_out))
+        if l == "list_mag_lvl8":
+            curent = parent.list_mag_lvl8.currentRow()
+            parent.list_mag_lvl8.takeItem(int(curent))
+            parent.list_mag_lvl8.addItem(str(name_of_spell_out))
+        if l == "list_mag_lvl9":
+            curent = parent.list_mag_lvl9.currentRow()
+            parent.list_mag_lvl9.takeItem(int(curent))
+            parent.list_mag_lvl9.addItem(str(name_of_spell_out))
+        self.close()
+
+
+
+#вспомогательный класс
+class Player():
+    def __init__(self, name):
+        self.name = name
+        print(self)
+
+    def get_me_info(self):
+        print(self.name)
+#Основное окно
+class main_ui(QMainWindow, Form):
     def __init__(self):
-        super().__init__()
+        super(main_ui, self).__init__()
+        self.setupUi(self)
         self.initUI()
+        #ui_id[0] = self
 
     def initUI(self):
-        self.checkBoxNone = QCheckBox("None Selected")
-        self.checkBoxA    = QCheckBox("Select A")
-        self.checkBoxB    = QCheckBox("Select B")
+        # self.characters_tab.setStyleSheet("background: url(1.jpg);")
 
-        self.checkBoxNone.setChecked(True)
-        self.checkBoxNone.stateChanged.connect(self.onStateChange)
-        self.checkBoxA.stateChanged.connect(self.onStateChange)
-        self.checkBoxB.stateChanged.connect(self.onStateChange)
+        self.characters_tab.setTabsClosable(True)
+        self.characters_tab.tabCloseRequested.connect(self.delete_person)
 
-        grid = QGridLayout(self)
+        self.add_character.triggered.connect(lambda: self.add_character_new())
+        self.load_character.triggered.connect(lambda: self.load_file_character())
+        self.save_character.triggered.connect(lambda: self.save_all())
+        # self.add_character.triggered.connect(lambda: self.save_one())
 
-        grid.addWidget(self.checkBoxNone, 1, 0)
-        grid.addWidget(self.checkBoxA, 2, 0)
-        grid.addWidget(self.checkBoxB, 3, 0)
-        self.setWindowTitle('Test')
-        self.show()
+        self.message = QMessageBox.information(self, 'Минуту внимания', "Хочу сразу обратить ваше внимание на то, что это приложение еще очень сырое. Много мыслей по допилу, много новых идей, но есть одно огромное НО, я - единственный разработчик. Догнать своего платного собрата я не смогу при всем желании, ибо там целая команда из 3-х человек... Кстати, тут не будет планых функций, планых обновлений И.Т.П. Спасибо за внимание. Извините за окошко.")
 
-    @pyqtSlot(int)
-    def onStateChange(self, state):
-        if state == Qt.Checked:
-            if self.sender() == self.checkBoxNone:
-                self.checkBoxA.setChecked(False)
-                self.checkBoxB.setChecked(False)
-            elif self.sender() in (self.checkBoxA, self.checkBoxB):
-                self.checkBoxNone.setChecked(False)
+    # Перенос персонажа
+    class win_add_old_pers(QMainWindow, transfer_pers):
+        def __init__(self, parent=None):
+            super().__init__(parent, QtCore.Qt.Window)
+            self.parent = parent
+            self.setupUi(self)
+            # Загрузка рас
+            path = "configs\\"
+            files = os.listdir(path + "races\\")
+            print(files)
+            for i in files:
+                self.race_combobox.addItem(i.split(".")[0])
+            # загрузка классов
+            files = os.listdir(path + "classes\\")
+            print(files)
+            for i in files:
+                self.class_combobox.addItem(i.split(".")[0])
+            # Загрузка функции кнопок и.т.п.
+            self.access.clicked.connect(lambda: self.access_pers(parent))
+            self.denide.clicked.connect(lambda: self.denide_pers())
 
-if __name__ == '__main__':
-    if not QApplication.instance():
-        app = QApplication(sys.argv)
-    else:
-        app = QApplication.instance()
-    ex = Test()
-    sys.exit(app.exec_())
+        def access_pers(self, parent):
+            name = self.name_field.text()
+            race = self.race_combobox.currentText()
+            clas = self.class_combobox.currentText()
+            life_targ = self.life_target.toPlainText()
+            strong = self.strong_field.text()
+            dexterity = self.dexterity_field.text()
+            bodybuild = self.bodybuild_field.text()
+            intellect = self.intellect_field.text()
+            wise = self.wise_field.text()
+            charisma = self.charisma_field.text()
+
+            hp_at_this_moment = self.hp_at_this_moment_field.text()
+            hp_full = self.hp_full_field.text()
+            xp_at_this_moment = self.xp_at_this_moment_field.text()
+            print("Харизма:" + str(charisma))
+
+            if name == "" or race == "" or clas == "" or life_targ == "" or strong == "" or dexterity == "" or bodybuild == "" or intellect == "" or wise == "" or charisma == "" or \
+                    life_targ == "" or hp_at_this_moment == "" or hp_full == "" or xp_at_this_moment == "":
+                self.message = QMessageBox.information(self, "Упс...",
+                                                       'Посмотрите поля внимательнее, возможно вы что то пропустили!')
+            else:
+                # дописать авто-добавку
+                parent.create_character(name, race, clas, life_targ, strong, dexterity, bodybuild, intellect, wise,
+                                        charisma, hp_at_this_moment, hp_full, xp_at_this_moment)
+                self.denide_pers()
+
+
+        def denide_pers(self):
+            self.hide()
+
+    # создание персонажа
+    class win_add_new_pers(QMainWindow, create_pers):
+        def __init__(self, parent=None):
+            super().__init__(parent, QtCore.Qt.Window)
+            self.parent = parent
+            self.setupUi(self)
+            # Загрузка рас
+            path = "configs\\"
+            files = os.listdir(path + "races\\")
+            print(files)
+            for i in files:
+                self.pers_race.addItem(i.split(".")[0])
+            # загрузка классов
+            files = os.listdir(path + "classes\\")
+            print(files)
+            for i in files:
+                self.pers_class.addItem(i.split(".")[0])
+            # Загрузка функции кнопок и.т.п.
+            self.auto_kubic_button.clicked.connect(lambda: self.auto_kubic())
+            self.delete_current_int.clicked.connect(lambda: self.delete_cur_int())
+            self.hand_made_button.clicked.connect(lambda: self.dice_ki.addItem(str(self.hand_made_field.text())))
+            self.add_pers.clicked.connect(lambda: self.finish_add(parent))
+            self.cancle.clicked.connect(lambda: self.cancle_pers())
 
 
 
+        def delete_cur_int(self):
+            curent = self.dice_ki.currentRow()
+            self.dice_ki.takeItem(int(curent))
+        def auto_kubic(self):
+            for i in range(0, 6):
+                a = []
+                pep = 0
+                for g in range(0, 4):
+                    a.append(random.randint(1, 6))
+                qw = 500
+                print(a)
+                for f in a:
+                    if qw >= f:
+                        qw = f
+                        print(qw)
+                a.remove(qw)
+                print(a)
+                for h in a:
+                    pep = pep + h
+                self.dice_ki.addItem(str(pep))
 
-"""
+        def finish_add(self, parent):
+            name = self.person_name.text()
+            race = self.pers_race.currentText()
+            clas = self.pers_class.currentText()
+            life_targ = self.life_target.toPlainText()
+            strong = self.strong_new_pers.item(0).text()
+            dexterity = self.dexterity_new_pers.item(0).text()
+            bodybuild = self.bodybuild_new_pers.item(0).text()
+            intellcect = self.intellcect_new_pers.item(0).text()
+            wise = self.wise_new_pers.item(0).text()
+            charisma = self.charisma_new_pers.item(0).text()
+
+            if name == "" or race == "" or clas == "" or life_targ == "" or strong == "" or dexterity == "" or bodybuild == "" or intellcect == "" or wise == "" or charisma == "":
+                self.message = QMessageBox.information(self, "Упс...", 'Посмотрите поля внимательнее, возможно вы что то пропустили!')
+            else:
+                #дописать авто-добавку
+                parent.create_character(name, race, clas, life_targ, strong, dexterity, bodybuild, intellcect, wise, charisma, None, None, None)
+                self.cancle_pers()
+        def cancle_pers(self):
+            self.hide()
 
 
-def create_character(player):
-        text, ok = QInputDialog.getText(self, 'Создание персонажа', 'Введите имя героя:')
-        player = player.tab.Player(text)
-        player.tab.get_me_info()
+    @QtCore.pyqtSlot(int)
+    def delete_person(self, tab_index):
+        name_of_del_tab = self.characters_tab.tabText(tab_index)
+        currentQWidget = self.characters_tab.widget(tab_index)
+        currentQWidget.deleteLater()
+        self.characters_tab.removeTab(tab_index)
 
+    def add_character_new(self):
+        self.new_personaj = QMessageBox.question(self, 'Создание персонажа', "У вас уже есть готовый персонаж?", QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel, QMessageBox.Cancel)
+        if self.new_personaj == QMessageBox.Yes:
+            ui2 = self.win_add_old_pers(self)
+            ui2.show()
+        if self.new_personaj == QMessageBox.No:
+            ui2 = self.win_add_new_pers(self)
+            ui2.show()
+        if self.new_personaj == QMessageBox.Cancel:
+            None
+
+
+        #text, ok = QInputDialog.getText(self, 'Создание персонажа', 'Введите имя героя:')
+        #self.create_character(text)
+
+
+    def save_all(self):
+        for character in tab_list:
+            #first block
+            description_of_person_1_out = character.description_of_person_1.toPlainText()
+            description_of_person_2_out = character.description_of_person_2.toPlainText()
+            description_of_person_3_out = character.description_of_person_3.toPlainText()
+            description_of_person_4_out = character.description_of_person_4.toPlainText()
+            description_of_person_5_out = character.description_of_person_5.toPlainText()
+            description_of_person_6_out = character.description_of_person_6.toPlainText()
+            description_of_person_7_out = character.description_of_person_7.toPlainText()
+
+            #second
+                #strong
+            strong_field_out = character.strong_field.text()
+
+            competention_athletics_checkbox_out = character.competention_athletics_checkbox.checkState()
+            athletics_checkboxhaving_out = character.athletics_checkboxhaving.checkState()
+            save_giving_strong_checkboxhaving_out = character.save_giving_strong_checkboxhaving.checkState()
+
+                #dexterity
+            dexterity_field_out = character.dexterity_field.text()
+
+            acrobatica_checkbox_out = character.acrobatica_checkbox.checkState()
+            acrobatica_checkboxhaving_out = character.acrobatica_checkboxhaving.checkState()
+            lovk_ryk_checkbox_out = character.lovk_ryk_checkbox.checkState()
+            lovk_ryk_checkboxhaving_out = character.lovk_ryk_checkboxhaving.checkState()
+            stealth_checkbox_out = character.stealth_checkbox.checkState()
+            stealth_checkboxhaving_out = character.stealth_checkboxhaving.checkState()
+            save_giving_dexterity_checkboxhaving_out = character.save_giving_dexterity_checkboxhaving.checkState()
+
+                #bodybuild
+            bodybuild_field_out = character.bodybuild_field.text()
+
+            save_giving_bodybuild_checkboxhaving_out = character.save_giving_bodybuild_checkboxhaving.checkState()
+
+                #intellect
+            intellect_field_out = character.intellect_field.text()
+
+            analiz_checkbox_out = character.analiz_checkbox.checkState()
+            analiz_checkboxhaving_out = character.analiz_checkboxhaving.checkState()
+            history_checkbox_out = character.history_checkbox.checkState()
+            history_checkboxhaving_out = character.history_checkboxhaving.checkState()
+            magic_checkbox_out = character.magic_checkbox.checkState()
+            magic_checkboxhaving_out = character.magic_checkboxhaving.checkState()
+            nature_checkbox_out = character.nature_checkbox.checkState()
+            nature_checkboxhaving_out = character.nature_checkboxhaving.checkState()
+            religion_checkbox_out = character.religion_checkbox.checkState()
+            religion_checkboxhaving_out = character.religion_checkboxhaving.checkState()
+            save_giving_intellect_checkboxhaving_out = character.save_giving_intellect_checkboxhaving.checkState()
+
+                #wise
+            znachenie_wise_field_out = character.znachenie_wise_field.text()
+
+            mindfulness_checkbox_out = character.mindfulness_checkbox.checkState()
+            mindfulness_checkboxhaving_out = character.mindfulness_checkboxhaving.checkState()
+            living_checkbox_out = character.living_checkbox.checkState()
+            living_checkboxhaving_out = character.living_checkboxhaving.checkState()
+            medicine_checkbox_out = character.medicine_checkbox.checkState()
+            medicine_checkboxhaving_out = character.medicine_checkboxhaving.checkState()
+            insight_checkbox_out = character.insight_checkbox.checkState()
+            insight_checkboxhaving_out = character.insight_checkboxhaving.checkState()
+            care_of_animal_checkbox_out = character.care_of_animal_checkbox.checkState()
+            care_of_animal_checkboxhaving_out = character.care_of_animal_checkboxhaving.checkState()
+            save_giving_wise_checkboxhaving_out = character.save_giving_wise_checkboxhaving.checkState()
+
+                #charisma
+            znachenie_charisma_field_out = character.znachenie_charisma_field.text()
+
+            perfomance_checkbox_out = character.perfomance_checkbox.checkState()
+            perfomance_checkboxhaving_out = character.perfomance_checkboxhaving.checkState()
+            bullying_checkbox_out = character.bullying_checkbox.checkState()
+            bullying_checkboxhaving_out = character.bullying_checkboxhaving.checkState()
+            fraud_checkbox_out = character.fraud_checkbox.checkState()
+            fraud_checkboxhaving_out = character.fraud_checkboxhaving.checkState()
+            conviction_checkbox_out = character.conviction_checkbox.checkState()
+            conviction_checkboxhaving_out = character.conviction_checkboxhaving.checkState()
+            save_giving_charisma_checkboxhaving_out = character.save_giving_charisma_checkboxhaving.checkState()
+
+            #block 3
+            life_target_out = character.life_target.toPlainText()
+            class_combobox_out = character.class_combobox.currentText()
+            lvl_field_out = character.lvl_field.text()
+            rase_combobox_out = character.rase_combobox.currentText()
+            speed_field_out = character.speed_field.text()
+            class_zakl_field_out = character.class_zakl_field.text()
+            kost_hitov_field_out = character.kost_hitov_field.text()
+            base_characteristics_field_out = character.base_characteristics_field.text()
+            passwise_field_out = character.passwise_field.text()
+            up_character_checkbox_out = character.up_character_checkbox.checkState()
+            #block 3/2
+            hp_at_this_moment_field_out = character.hp_at_this_moment_field.text()
+            hp_full_field_out = character.hp_full_field.text()
+            xp_at_this_moment_field_out = character.xp_at_this_moment_field.text()
+            bon_mast_field_out = character.bon_mast_field.text()
+            initiative_field_out = character.initiative_field.text()
+            KD_field_out = character.KD_field.text()
+            sl_spas_field_out = character.sl_spas_field.text()
+            bon_attack_field_out = character.bon_attack_field.text()
+
+            save_giving_of_death_success_box_1_out = character.save_giving_of_death_success_box_1.checkState()
+            save_giving_of_death_success_box_2_out = character.save_giving_of_death_success_box_2.checkState()
+            save_giving_of_death_success_box_3_out = character.save_giving_of_death_success_box_3.checkState()
+
+            save_giving_of_death_fail_box_1_out = character.save_giving_of_death_fail_box_1.checkState()
+            save_giving_of_death_fail_box_2_out = character.save_giving_of_death_fail_box_2.checkState()
+            save_giving_of_death_fail_box_3_out = character.save_giving_of_death_fail_box_3.checkState()
+
+            #invents
+            character.list_mag_lvl0_list = []
+            character.list_mag_lvl1_list = []
+            character.list_mag_lvl2_list = []
+            character.list_mag_lvl3_list = []
+            character.list_mag_lvl4_list = []
+            character.list_mag_lvl5_list = []
+            character.list_mag_lvl6_list = []
+            character.list_mag_lvl7_list = []
+            character.list_mag_lvl8_list = []
+            character.list_mag_lvl9_list = []
+
+            for i in range(character.list_mag_lvl0.count()):
+                character.list_mag_lvl0_list.append(character.list_mag_lvl0.item(i).text())
+            for i in range(character.list_mag_lvl1.count()):
+                character.list_mag_lvl1_list.append(character.list_mag_lvl1.item(i).text())
+            for i in range(character.list_mag_lvl2.count()):
+                character.list_mag_lvl2_list.append(character.list_mag_lvl2.item(i).text())
+            for i in range(character.list_mag_lvl3.count()):
+                character.list_mag_lvl3_list.append(character.list_mag_lvl3.item(i).text())
+            for i in range(character.list_mag_lvl4.count()):
+                character.list_mag_lvl4_list.append(character.list_mag_lvl4.item(i).text())
+            for i in range(character.list_mag_lvl5.count()):
+                character.list_mag_lvl5_list.append(character.list_mag_lvl5.item(i).text())
+            for i in range(character.list_mag_lvl6.count()):
+                character.list_mag_lvl6_list.append(character.list_mag_lvl6.item(i).text())
+            for i in range(character.list_mag_lvl7.count()):
+                character.list_mag_lvl7_list.append(character.list_mag_lvl7.item(i).text())
+            for i in range(character.list_mag_lvl8.count()):
+                character.list_mag_lvl8_list.append(character.list_mag_lvl8.item(i).text())
+            for i in range(character.list_mag_lvl9.count()):
+                character.list_mag_lvl9_list.append(character.list_mag_lvl9.item(i).text())
+
+            mag_lvl0_can_use_field_out = character.mag_lvl0_can_use_field.text()
+            mag_lvl0_used_field_out = character.mag_lvl0_used_field.text()
+            mag_lvl1_can_use_field_out = character.mag_lvl1_can_use_field.text()
+            mag_lvl1_used_field_out = character.mag_lvl1_used_field.text()
+            mag_lvl2_can_use_field_out = character.mag_lvl2_can_use_field.text()
+            mag_lvl2_used_field_out = character.mag_lvl2_used_field.text()
+            mag_lvl3_can_use_field_out = character.mag_lvl3_can_use_field.text()
+            mag_lvl3_used_field_out = character.mag_lvl3_used_field.text()
+            mag_lvl4_can_use_field_out = character.mag_lvl4_can_use_field.text()
+            mag_lvl4_used_field_out = character.mag_lvl4_used_field.text()
+            mag_lvl5_can_use_field_out = character.mag_lvl5_can_use_field.text()
+            mag_lvl5_used_field_out = character.mag_lvl5_used_field.text()
+            mag_lvl6_can_use_field_out = character.mag_lvl6_can_use_field.text()
+            mag_lvl6_used_field_out = character.mag_lvl6_used_field.text()
+            mag_lvl7_can_use_field_out = character.mag_lvl7_can_use_field.text()
+            mag_lvl7_used_field_out = character.mag_lvl7_used_field.text()
+            mag_lvl8_can_use_field_out = character.mag_lvl8_can_use_field.text()
+            mag_lvl8_used_field_out = character.mag_lvl8_used_field.text()
+            mag_lvl9_can_use_field_out = character.mag_lvl9_can_use_field.text()
+            mag_lvl9_used_field_out = character.mag_lvl9_used_field.text()
+
+            character.on_person_list_list = []
+            for i in range(character.on_person_list.count()):
+                character.on_person_list_list.append(character.on_person_list.item(i).text())
+
+            character.in_inventory_list_list = []
+            for i in range(character.in_inventory_list.count()):
+                character.in_inventory_list_list.append(character.in_inventory_list.item(i).text())
+
+            character.can_have_invent_list_list = []
+            for i in range(character.can_have_invent_list.count()):
+                character.can_have_invent_list_list.append(character.can_have_invent_list.item(i).text())
+
+            character.spechial_invent_list_list = []
+            for i in range(character.spechial_invent_list.count()):
+                character.spechial_invent_list_list.append(character.spechial_invent_list.item(i).text())
+
+            person_name_out = character.person_name.text()
+
+            data = {"name":person_name_out, "race":rase_combobox_out, "class":class_combobox_out, "life_target":life_target_out, "strong":strong_field_out, "dexterity":dexterity_field_out, "bodybuild":bodybuild_field_out, "intellect":intellect_field_out,
+                    "wise":znachenie_wise_field_out, "charisma":znachenie_charisma_field_out, "hp":hp_at_this_moment_field_out, "full_hp":hp_full_field_out, "xp":xp_at_this_moment_field_out, "description_1":description_of_person_1_out,
+                    "description2":description_of_person_2_out, "description3":description_of_person_3_out, "description4":description_of_person_4_out, "description5":description_of_person_5_out,"description6":description_of_person_6_out,
+                    "description7":description_of_person_7_out, "competention_athletics":competention_athletics_checkbox_out, "having_athletics":athletics_checkboxhaving_out, "save_giving_strong":save_giving_strong_checkboxhaving_out,
+                    "competention_acrobatica":acrobatica_checkbox_out, "having_acrobatica":acrobatica_checkboxhaving_out,"competention_lovk_ryk":lovk_ryk_checkbox_out, "having_lovk_ryk":lovk_ryk_checkboxhaving_out, "competention_stealth":stealth_checkbox_out,
+                    "having_stealth":stealth_checkboxhaving_out, "save_giving_dexterity":save_giving_dexterity_checkboxhaving_out,"save_giving_bodybuild":save_giving_bodybuild_checkboxhaving_out, "competention_analiz":analiz_checkbox_out,
+                    "having_analiz":analiz_checkboxhaving_out,"competention_history":history_checkbox_out, "having_history":history_checkboxhaving_out, "competention_magic":magic_checkbox_out, "having_magic":magic_checkboxhaving_out,
+                    "competention_nature":nature_checkbox_out,"having_nature":nature_checkboxhaving_out,"competention_religion":religion_checkbox_out, "having_religion":religion_checkboxhaving_out, "save_giving_intellect":save_giving_intellect_checkboxhaving_out,
+                    "competention_mindfulness":mindfulness_checkbox_out, "having_mindfulness":mindfulness_checkboxhaving_out, "competention_mindfulness":living_checkbox_out, "having_living":living_checkboxhaving_out,"competention_medicine":medicine_checkbox_out,
+                    "having_medicine":medicine_checkboxhaving_out, "competention_insight":insight_checkbox_out, "having_insight":insight_checkboxhaving_out, "competention_care_of_animal":care_of_animal_checkbox_out,"having_care_of_animal":care_of_animal_checkboxhaving_out,
+                    "save_giving_wise":save_giving_wise_checkboxhaving_out, "competention_perfomance":perfomance_checkbox_out, "having_perfomance":perfomance_checkboxhaving_out, "competention_bullying":bullying_checkbox_out, "having_bullying":bullying_checkboxhaving_out,
+                    "competention_fraud":fraud_checkbox_out, "having_fraud":fraud_checkboxhaving_out,"competention_conviction":conviction_checkbox_out, "having_conviction":conviction_checkboxhaving_out, "save_giving_charisma":save_giving_charisma_checkboxhaving_out,
+                    "lvl":lvl_field_out, "speed":speed_field_out, "class":class_zakl_field_out, "kost_hitov":kost_hitov_field_out, "base_characteristics":base_characteristics_field_out, "passive_wise":passwise_field_out,"up_inspiration":up_character_checkbox_out,
+                    "bonus_masterstva":bon_mast_field_out, "initiative":initiative_field_out, "KD":KD_field_out, "difficulty_of_rescue":sl_spas_field_out,"bonus_attack":bon_attack_field_out, "save_giving_of_death_success_box_1":save_giving_of_death_success_box_1_out,
+                    "save_giving_of_death_success_box_2":save_giving_of_death_success_box_2_out, "save_giving_of_death_success_box_3":save_giving_of_death_success_box_3_out,"save_giving_of_death_fail_box_1":save_giving_of_death_fail_box_1_out,
+                    "save_giving_of_death_fail_box_2":save_giving_of_death_fail_box_2_out, "save_giving_of_death_fail_box_3":save_giving_of_death_fail_box_3_out, "list_mag_lvl0":character.list_mag_lvl0_list, "list_mag_lvl1":character.list_mag_lvl1_list,
+                    "list_mag_lvl2":character.list_mag_lvl2_list, "list_mag_lvl3":character.list_mag_lvl3_list,"list_mag_lvl4":character.list_mag_lvl4_list, "list_mag_lvl5":character.list_mag_lvl5_list, "list_mag_lvl6":character.list_mag_lvl6_list,
+                    "list_mag_lvl7":character.list_mag_lvl7_list, "list_mag_lvl8":character.list_mag_lvl8_list, "list_mag_lvl9":character.list_mag_lvl9_list,"mag_lvl0_can_use":mag_lvl0_can_use_field_out, "mag_lvl0_used":mag_lvl0_used_field_out,
+                    "mag_lvl1_can_use":mag_lvl1_can_use_field_out, "mag_lvl1_used":mag_lvl1_used_field_out, "mag_lvl2_can_use":mag_lvl2_can_use_field_out, "mag_lvl2_used":mag_lvl2_used_field_out, "mag_lvl3_can_use":mag_lvl3_can_use_field_out,
+                    "mag_lvl3_used":mag_lvl3_used_field_out, "mag_lvl4_can_use":mag_lvl4_can_use_field_out, "mag_lvl4_used":mag_lvl4_used_field_out, "mag_lvl5_can_use":mag_lvl5_can_use_field_out,"mag_lvl5_used":mag_lvl5_used_field_out,
+                    "mag_lvl6_can_use":mag_lvl6_can_use_field_out, "mag_lvl6_used":mag_lvl6_used_field_out, "mag_lvl7_can_use":mag_lvl7_can_use_field_out, "mag_lvl7_used":mag_lvl7_used_field_out, "mag_lvl8_can_use":mag_lvl8_can_use_field_out,
+                    "mag_lvl8_used":mag_lvl8_used_field_out, "mag_lvl9_can_use":mag_lvl9_can_use_field_out, "mag_lvl9_used":mag_lvl9_used_field_out,"invent_on_person":character.on_person_list_list, "invent_in_invent":character.in_inventory_list_list,
+                    "invent_can_have":character.can_have_invent_list_list, "invent_spechial":character.spechial_invent_list_list}
+
+            with open("configs\\saves\\" + str(person_name_out) + ".json", "w", encoding="utf-8") as file:
+                json.dump(data, file)
+            print("saved success")
+
+    def load_file_character(self):
+        file, __ = QFileDialog.getOpenFileName(self, 'Open file')
+        with open(file, 'r', encoding="utf-8") as fh:
+            loads_data = json.load(fh)
+            """
+            for i in data:
+                print(data[i])
+            """
+        self.create_character(loads_data["name"], loads_data["race"], loads_data["class"], loads_data["life_target"], loads_data["strong"], loads_data["dexterity"], loads_data["bodybuild"], loads_data["intellect"], loads_data["wise"], loads_data["charisma"], loads_data["hp"], loads_data["full_hp"], loads_data["xp"])
+
+    def create_character(self, text, race, clas, life_targ, strong, dexterity, bodybuild, intellcect, wise, charisma, hp_at_this_moment, hp_full, xp_at_this_moment):
+        player = Player(text)
+        player.get_me_info()
         player.tab = QtWidgets.QWidget(self)
         player.tab.setObjectName(text)
-        id_name.append(text)
+
+        tab_list[player.tab] = player
+        print(tab_list)
 
         player.tab.caractersistics = QtWidgets.QTabWidget(player.tab)
         player.tab.caractersistics.setGeometry(QtCore.QRect(0, 400, 341, 461))
@@ -257,7 +813,7 @@ def create_character(player):
         player.tab.description_strong_labl.setGeometry(QtCore.QRect(10, 140, 281, 271))
         player.tab.description_strong_labl.setTextFormat(QtCore.Qt.AutoText)
         player.tab.description_strong_labl.setAlignment(
-                QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+            QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
         player.tab.description_strong_labl.setWordWrap(False)
         player.tab.description_strong_labl.setOpenExternalLinks(False)
         player.tab.description_strong_labl.setTextInteractionFlags(QtCore.Qt.NoTextInteraction)
@@ -519,7 +1075,7 @@ def create_character(player):
         player.tab.description_dexterity_labl.setGeometry(QtCore.QRect(7, 190, 311, 231))
         player.tab.description_dexterity_labl.setTextFormat(QtCore.Qt.AutoText)
         player.tab.description_dexterity_labl.setAlignment(
-                QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+            QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
         player.tab.description_dexterity_labl.setWordWrap(False)
         player.tab.description_dexterity_labl.setOpenExternalLinks(False)
         player.tab.description_dexterity_labl.setTextInteractionFlags(QtCore.Qt.NoTextInteraction)
@@ -595,7 +1151,7 @@ def create_character(player):
         player.tab.description_bodybuild_labl.setGeometry(QtCore.QRect(10, 70, 311, 271))
         player.tab.description_bodybuild_labl.setTextFormat(QtCore.Qt.AutoText)
         player.tab.description_bodybuild_labl.setAlignment(
-                QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+            QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
         player.tab.description_bodybuild_labl.setWordWrap(False)
         player.tab.description_bodybuild_labl.setOpenExternalLinks(False)
         player.tab.description_bodybuild_labl.setTextInteractionFlags(QtCore.Qt.NoTextInteraction)
@@ -688,9 +1244,9 @@ def create_character(player):
         player.tab.magic_field = QtWidgets.QLineEdit(player.tab.gridLayoutWidget_4)
         player.tab.magic_field.setObjectName("magic_field")
         player.tab.gridLayout_4.addWidget(player.tab.magic_field, 6, 6, 1, 1)
-        player.tab.intellect_checkbox = QtWidgets.QLineEdit(player.tab.gridLayoutWidget_4)
-        player.tab.intellect_checkbox.setObjectName("intellect_checkbox")
-        player.tab.gridLayout_4.addWidget(player.tab.intellect_checkbox, 0, 2, 1, 1)
+        player.tab.intellect_field = QtWidgets.QLineEdit(player.tab.gridLayoutWidget_4)
+        player.tab.intellect_field.setObjectName("intellect_field")
+        player.tab.gridLayout_4.addWidget(player.tab.intellect_field, 0, 2, 1, 1)
         player.tab.line_114 = QtWidgets.QFrame(player.tab.gridLayoutWidget_4)
         player.tab.line_114.setFrameShape(QtWidgets.QFrame.HLine)
         player.tab.line_114.setFrameShadow(QtWidgets.QFrame.Sunken)
@@ -921,7 +1477,7 @@ def create_character(player):
         player.tab.description_intellect_labl.setGeometry(QtCore.QRect(10, 250, 311, 191))
         player.tab.description_intellect_labl.setTextFormat(QtCore.Qt.PlainText)
         player.tab.description_intellect_labl.setAlignment(
-                QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+            QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
         player.tab.description_intellect_labl.setObjectName("description_intellect_labl")
         player.tab.caractersistics.addTab(player.tab.characteristics_intellect, "")
         player.tab.characteristics_wise = QtWidgets.QWidget()
@@ -1534,7 +2090,7 @@ def create_character(player):
         player.tab.description_charisma_labl = QtWidgets.QLabel(player.tab.characteristics_charisma)
         player.tab.description_charisma_labl.setGeometry(QtCore.QRect(10, 230, 301, 221))
         player.tab.description_charisma_labl.setAlignment(
-                QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+            QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
         player.tab.description_charisma_labl.setProperty("123", "")
         player.tab.description_charisma_labl.setObjectName("description_charisma_labl")
         player.tab.caractersistics.addTab(player.tab.characteristics_charisma, "")
@@ -1850,16 +2406,6 @@ def create_character(player):
         player.tab.rase_combobox = QtWidgets.QComboBox(player.tab_23)
         player.tab.rase_combobox.setGeometry(QtCore.QRect(83, 68, 131, 22))
         player.tab.rase_combobox.setObjectName("rase_combobox")
-        player.tab.up_character_checkbox = QtWidgets.QCheckBox(player.tab_23)
-        player.tab.up_character_checkbox.setGeometry(QtCore.QRect(-2, 245, 101, 20))
-        font = QtGui.QFont()
-        font.setPointSize(9)
-        player.tab.up_character_checkbox.setFont(font)
-        player.tab.up_character_checkbox.setLayoutDirection(QtCore.Qt.RightToLeft)
-        player.tab.up_character_checkbox.setAutoFillBackground(False)
-        player.tab.up_character_checkbox.setAutoExclusive(False)
-        player.tab.up_character_checkbox.setTristate(False)
-        player.tab.up_character_checkbox.setObjectName("up_character_checkbox")
         player.tab.label_73 = QtWidgets.QLabel(player.tab_23)
         player.tab.label_73.setGeometry(QtCore.QRect(23, 211, 61, 31))
         font = QtGui.QFont()
@@ -2183,252 +2729,113 @@ def create_character(player):
         player.tab.time_button.setGeometry(QtCore.QRect(8, 50, 75, 23))
         player.tab.time_button.setFocusPolicy(QtCore.Qt.ClickFocus)
         player.tab.time_button.setObjectName("time_button")
-        player.tab.add_mag_lvl0_2 = QtWidgets.QPushButton(player.tab)
-        player.tab.add_mag_lvl0_2.setGeometry(QtCore.QRect(840, 830, 75, 23))
+        player.tab.add_to_invent_button = QtWidgets.QPushButton(player.tab)
+        player.tab.add_to_invent_button.setGeometry(QtCore.QRect(840, 830, 75, 23))
         font = QtGui.QFont()
         font.setPointSize(9)
-        player.tab.add_mag_lvl0_2.setFont(font)
-        player.tab.add_mag_lvl0_2.setObjectName("add_mag_lvl0_2")
-        player.tab.pushButton_4 = QtWidgets.QPushButton(player.tab)
-        player.tab.pushButton_4.setGeometry(QtCore.QRect(920, 830, 75, 23))
+        player.tab.add_to_invent_button.setFont(font)
+        player.tab.add_to_invent_button.setObjectName("add_to_invent_button")
+        player.tab.edit_item_list = QtWidgets.QPushButton(player.tab)
+        player.tab.edit_item_list.setGeometry(QtCore.QRect(920, 830, 75, 23))
         font = QtGui.QFont()
         font.setPointSize(9)
-        player.tab.pushButton_4.setFont(font)
-        player.tab.pushButton_4.setObjectName("pushButton_4")
-        player.tab.pushButton_5 = QtWidgets.QPushButton(player.tab)
-        player.tab.pushButton_5.setGeometry(QtCore.QRect(1000, 830, 75, 23))
+        player.tab.edit_item_list.setFont(font)
+        player.tab.edit_item_list.setObjectName("edit_item_list")
+        player.tab.delete_invent_button = QtWidgets.QPushButton(player.tab)
+        player.tab.delete_invent_button.setGeometry(QtCore.QRect(1000, 830, 75, 23))
         font = QtGui.QFont()
         font.setPointSize(9)
-        player.tab.pushButton_5.setFont(font)
-        player.tab.pushButton_5.setObjectName("pushButton_5")
-        player.tab.characters_tab.addTab(player.tab, "")
-        player.tab = QtWidgets.QWidget()
-        player.tab.setObjectName("tab")
-        player.tab.characters_tab.addTab(player.tab, "")
-        MainWindow.setCentralWidget(player.tab.centralwidget)
-        player.tab.menuBar = QtWidgets.QMenuBar(MainWindow)
-        player.tab.menuBar.setGeometry(QtCore.QRect(0, 0, 1100, 21))
-        font = QtGui.QFont()
-        font.setFamily("Source Code Pro Semibold")
-        font.setStrikeOut(False)
-        player.tab.menuBar.setFont(font)
-        player.tab.menuBar.setLayoutDirection(QtCore.Qt.LeftToRight)
-        player.tab.menuBar.setAutoFillBackground(True)
-        player.tab.menuBar.setDefaultUp(False)
-        player.tab.menuBar.setObjectName("menuBar")
-        player.tab.character_menu = QtWidgets.QMenu(player.tab.menuBar)
-        player.tab.character_menu.setObjectName("character_menu")
-        player.tab.book_menu = QtWidgets.QMenu(player.tab.menuBar)
-        player.tab.book_menu.setObjectName("book_menu")
-        player.tab.instruments_menu = QtWidgets.QMenu(player.tab.menuBar)
-        player.tab.instruments_menu.setObjectName("instruments_menu")
-        player.tab.instr_character = QtWidgets.QMenu(player.tab.instruments_menu)
-        player.tab.instr_character.setObjectName("instr_character")
-        player.tab.name_generator = QtWidgets.QMenu(player.tab.instr_character)
-        player.tab.name_generator.setObjectName("name_generator")
-        player.tab.bandit_name_generator = QtWidgets.QMenu(player.tab.instr_character)
-        player.tab.bandit_name_generator.setObjectName("bandit_name_generator")
-        player.tab.harakter_generator = QtWidgets.QMenu(player.tab.instr_character)
-        player.tab.harakter_generator.setObjectName("harakter_generator")
-        player.tab.country_name_generator = QtWidgets.QMenu(player.tab.instr_character)
-        player.tab.country_name_generator.setObjectName("country_name_generator")
-        player.tab.make_location = QtWidgets.QMenu(player.tab.instruments_menu)
-        player.tab.make_location.setObjectName("make_location")
-        player.tab.home_generator = QtWidgets.QMenu(player.tab.make_location)
-        player.tab.home_generator.setObjectName("home_generator")
-        player.tab.city_generator = QtWidgets.QMenu(player.tab.make_location)
-        player.tab.city_generator.setObjectName("city_generator")
-        player.tab.usefull_menu = QtWidgets.QMenu(player.tab.menuBar)
-        player.tab.usefull_menu.setObjectName("usefull_menu")
-        player.tab.bestiary = QtWidgets.QMenu(player.tab.usefull_menu)
-        player.tab.bestiary.setObjectName("bestiary")
-        player.tab.items = QtWidgets.QMenu(player.tab.usefull_menu)
-        player.tab.items.setObjectName("items")
-        player.tab.magic_items = QtWidgets.QMenu(player.tab.items)
-        player.tab.magic_items.setObjectName("magic_items")
-        player.tab.normal_items = QtWidgets.QMenu(player.tab.items)
-        player.tab.normal_items.setObjectName("normal_items")
-        player.tab.magic = QtWidgets.QMenu(player.tab.usefull_menu)
-        player.tab.magic.setObjectName("magic")
-        player.tab.cubes = QtWidgets.QMenu(player.tab.menuBar)
-        player.tab.cubes.setObjectName("cubes")
-        player.tab.configs = QtWidgets.QMenu(player.tab.menuBar)
-        player.tab.configs.setObjectName("configs")
-        player.tab.vk_group = QtWidgets.QMenu(player.tab.menuBar)
-        player.tab.vk_group.setObjectName("vk_group")
-        player.tab.help = QtWidgets.QMenu(player.tab.menuBar)
-        player.tab.help.setTearOffEnabled(False)
-        player.tab.help.setObjectName("help")
-        MainWindow.setMenuBar(player.tab.menuBar)
-        player.tab.add_character = QtWidgets.QAction(MainWindow)
-        player.tab.add_character.setObjectName("add_character")
-        player.tab.load_character = QtWidgets.QAction(MainWindow)
-        player.tab.actiondungeon_su_bestiary.setObjectName("actiondungeon_su_bestiary")
-        player.tab.actiontentaculus_ru_bestiary = QtWidgets.QAction(MainWindow)
-        player.tab.actiontentaculus_ru_bestiary.setObjectName("actiontentaculus_ru_bestiary")
-        player.tab.actiondungeon_su_magic_items = QtWidgets.QAction(MainWindow)
-        player.tab.actiondungeon_su_magic_items.setObjectName("actiondungeon_su_magic_items")
-        player.tab.actiontentaculus_ru_magic_items = QtWidgets.QAction(MainWindow)
-        player.tab.actiontentaculus_ru_magic_items.setObjectName("actiontentaculus_ru_magic_items")
-        player.tab.actiondungeon_su_normal_items = QtWidgets.QAction(MainWindow)
-        player.tab.actiondungeon_su_normal_items.setObjectName("actiondungeon_su_normal_items")
-        player.tab.actiondnd5_club_normal_items = QtWidgets.QAction(MainWindow)
-        player.tab.actiondnd5_club_normal_items.setObjectName("actiondnd5_club_normal_items")
-        player.tab.actiondungeon_su_magic = QtWidgets.QAction(MainWindow)
-        player.tab.actiondungeon_su_magic.setObjectName("actiondungeon_su_magic")
-        player.tab.actiontentaculus_ru_magic = QtWidgets.QAction(MainWindow)
-        player.tab.actiontentaculus_ru_magic.setObjectName("actiontentaculus_ru_magic")
-        player.tab.action1 = QtWidgets.QAction(MainWindow)
-        player.tab.action1.setObjectName("action1")
-        player.tab.character_menu.addAction(player.tab.add_character)
-        player.tab.character_menu.addAction(player.tab.load_character)
-        player.tab.character_menu.addAction(player.tab.save_character)
-        player.tab.book_menu.addAction(player.tab.master_book)
-        player.tab.book_menu.addAction(player.tab.study_book)
-        player.tab.name_generator.addAction(player.tab.actionAutoNAME_AutoREALM_name_generator)
-        player.tab.name_generator.addAction(player.tab.actiontentaculus_ru_name_generator)
-        player.tab.bandit_name_generator.addAction(player.tab.actionstormtower_ru_bandit_name_generator)
-        player.tab.harakter_generator.addAction(player.tab.actionrandomall_ru_harakter_generator)
-        player.tab.country_name_generator.addAction(player.tab.actionrandomall_ru_county_name_generator)
-        player.tab.instr_character.addAction(player.tab.name_generator.menuAction())
-        player.tab.instr_character.addAction(player.tab.bandit_name_generator.menuAction())
-        player.tab.instr_character.addAction(player.tab.harakter_generator.menuAction())
-        player.tab.instr_character.addAction(player.tab.country_name_generator.menuAction())
-        player.tab.instr_character.addAction(player.tab.actionrpgtinker_com_country_name_generator)
-        player.tab.home_generator.addAction(player.tab.actionstormtower_ru_home_generator)
-        player.tab.city_generator.addAction(player.tab.actionwatabou_itch_io_city_generator)
-        player.tab.make_location.addAction(player.tab.home_generator.menuAction())
-        player.tab.make_location.addAction(player.tab.city_generator.menuAction())
-        player.tab.make_location.addAction(player.tab.actionCampaign_Cartographer_3_CC3_city_generator)
-        player.tab.make_location.addAction(player.tab.actionAutoREALM_city_generator)
-        player.tab.make_location.addAction(player.tab.actionpyromancers_com_city_generator)
-        player.tab.instruments_menu.addAction(player.tab.instr_character.menuAction())
-        player.tab.instruments_menu.addAction(player.tab.make_location.menuAction())
-        player.tab.instruments_menu.addAction(player.tab.sounds)
-        player.tab.bestiary.addAction(player.tab.actiondungeon_su_bestiary)
-        player.tab.bestiary.addAction(player.tab.actiontentaculus_ru_bestiary)
-        player.tab.magic_items.addAction(player.tab.actiondungeon_su_magic_items)
-        player.tab.magic_items.addAction(player.tab.actiontentaculus_ru_magic_items)
-        player.tab.normal_items.addAction(player.tab.actiondungeon_su_normal_items)
-        player.tab.normal_items.addAction(player.tab.actiondnd5_club_normal_items)
-        player.tab.items.addAction(player.tab.magic_items.menuAction())
-        player.tab.items.addAction(player.tab.normal_items.menuAction())
-        player.tab.magic.addAction(player.tab.actiondungeon_su_magic)
-        player.tab.magic.addAction(player.tab.actiontentaculus_ru_magic)
-        player.tab.usefull_menu.addAction(player.tab.bestiary.menuAction())
-        player.tab.usefull_menu.addAction(player.tab.items.menuAction())
-        player.tab.usefull_menu.addAction(player.tab.magic.menuAction())
-        player.tab.cubes.addAction(player.tab.action1)
-        player.tab.menuBar.addAction(player.tab.character_menu.menuAction())
-        player.tab.menuBar.addAction(player.tab.book_menu.menuAction())
-        player.tab.menuBar.addAction(player.tab.instruments_menu.menuAction())
-        player.tab.menuBar.addAction(player.tab.usefull_menu.menuAction())
-        player.tab.menuBar.addAction(player.tab.cubes.menuAction())
-        player.tab.menuBar.addAction(player.tab.configs.menuAction())
-        player.tab.menuBar.addAction(player.tab.vk_group.menuAction())
-        player.tab.menuBar.addAction(player.tab.help.menuAction())
+        player.tab.delete_invent_button.setFont(font)
+        player.tab.delete_invent_button.setObjectName("delete_invent_button")
 
-        player.tab.retranslateUi(MainWindow)
-        player.tab.characters_tab.setCurrentIndex(0)
-        player.tab.caractersistics.setCurrentIndex(0)
-        player.tab.description_person.setCurrentIndex(0)
-        player.tab.magic_list.setCurrentIndex(6)
-        player.tab.much_inventories.setCurrentIndex(2)
-        player.tab.state_person.setCurrentIndex(1)
-        QtCore.QMetaObject.connectSlotsByName(MainWindow)
-
-        def retranslateUi(self, MainWindow):
-                _translate = QtCore.QCoreApplication.translate
-
-        MainWindow.setWindowTitle(_translate("MainWindow", "D&D Helper(alphatest 0.4)"))
-        player.tab.athletics_labl.setText(_translate("MainWindow", "Атлетика"))
-        player.tab.save_giving_labl.setText(_translate("MainWindow", "Спас.Бр."))
-        player.tab.mod_strong_labl.setText(_translate("MainWindow", "Модификатор:"))
-        player.tab.athletics_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.znachenie_strong_labl.setText(_translate("MainWindow", "Значение:"))
-        player.tab.competention_athletics_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.save_giving_strong_checkboxhaving.setText(_translate("MainWindow", "Владение"))
+        player.tab.athletics_labl.setText(("Атлетика"))
+        player.tab.save_giving_labl.setText(("Спас.Бр."))
+        player.tab.mod_strong_labl.setText(("Модификатор:"))
+        player.tab.athletics_checkboxhaving.setText(("Владение"))
+        player.tab.znachenie_strong_labl.setText(("Значение:"))
+        player.tab.competention_athletics_checkbox.setText(("Компет."))
+        player.tab.save_giving_strong_checkboxhaving.setText(("Владение"))
         player.tab.description_strong_labl.setText(
-                _translate("MainWindow", "Сила определяет телесную мощь, атлетичность \n"
-                                         "и ваши физические возможности. Обычно вы будете \n"
-                                         "использовать силу что бы подниматься, прыгать,\n"
-                                         "плавать, в рукопашной драке, выбивать двери,\n"
-                                         "поднимать ворота и разрывать оковы.\n"
-                                         "\n"
-                                         "Любой персонаж предпочитающий рукопашные бои,\n"
-                                         " может извлечь выгоду\n"
-                                         "из высокого показателя силы. \n"
-                                         "Таким образом бойцы, фехтовальщики \n"
-                                         "и другие воины предпочитают высокие показатели\n"
-                                         "силы."))
+            ("Сила определяет телесную мощь, атлетичность \n"
+                                     "и ваши физические возможности. Обычно вы будете \n"
+                                     "использовать силу что бы подниматься, прыгать,\n"
+                                     "плавать, в рукопашной драке, выбивать двери,\n"
+                                     "поднимать ворота и разрывать оковы.\n"
+                                     "\n"
+                                     "Любой персонаж предпочитающий рукопашные бои,\n"
+                                     " может извлечь выгоду\n"
+                                     "из высокого показателя силы. \n"
+                                     "Таким образом бойцы, фехтовальщики \n"
+                                     "и другие воины предпочитают высокие показатели\n"
+                                     "силы."))
         player.tab.caractersistics.setTabText(player.tab.caractersistics.indexOf(player.tab.characteristics_strong),
-                                              _translate("MainWindow", "Сила"))
-        player.tab.save_giving_labl_2.setText(_translate("MainWindow", "Спас.Бр."))
-        player.tab.acrobatica_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.lovk_ryk_labl.setText(_translate("MainWindow", "Ловкость\n"
+                                              ("Сила"))
+        player.tab.save_giving_labl_2.setText(("Спас.Бр."))
+        player.tab.acrobatica_checkboxhaving.setText(("Владение"))
+        player.tab.lovk_ryk_labl.setText(("Ловкость\n"
                                                                   "рук"))
-        player.tab.save_giving_dexterity_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.mod_strong_labl_2.setText(_translate("MainWindow", "Модификатор:"))
-        player.tab.stealth_labl.setText(_translate("MainWindow", "Скрытность"))
-        player.tab.acrobatica_labl.setText(_translate("MainWindow", "Акробатика"))
-        player.tab.acrobatica_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.znachenie_dexterity_labl.setText(_translate("MainWindow", "Значение:"))
-        player.tab.lovk_ryk_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.stealth_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.lovk_ryk_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.stealth_checkboxhaving.setText(_translate("MainWindow", "Владение"))
+        player.tab.save_giving_dexterity_checkboxhaving.setText(("Владение"))
+        player.tab.mod_strong_labl_2.setText(("Модификатор:"))
+        player.tab.stealth_labl.setText(("Скрытность"))
+        player.tab.acrobatica_labl.setText(("Акробатика"))
+        player.tab.acrobatica_checkbox.setText(("Компет."))
+        player.tab.znachenie_dexterity_labl.setText(("Значение:"))
+        player.tab.lovk_ryk_checkbox.setText(("Компет."))
+        player.tab.stealth_checkbox.setText(("Компет."))
+        player.tab.lovk_ryk_checkboxhaving.setText(("Владение"))
+        player.tab.stealth_checkboxhaving.setText(("Владение"))
         player.tab.description_dexterity_labl.setText(
-                _translate("MainWindow", "Ловкость определяет вашу физическую гибкость,\n"
-                                         "рефлексы и баланс. Обычно вы используете ловкость\n"
-                                         "для выполнения акробатических действий,\n"
-                                         "таких как удержание баланса при перемещении\n"
-                                         "по опасной поверхности, искривление вашего тела\n"
-                                         "при перемещении в узких пространствах,\n"
-                                         "поражение врага метательным снарядом или освобождение\n"
-                                         "из пут.\n"
-                                         "Разбойники и другие персонажи, носящие легкую броню,\n"
-                                         "предпочитают высокую ловкость, это помогает им\n"
-                                         "избежать вражеских атак. Персонаж может использовать\n"
-                                         "ловкость, когда атакует с лука, пращи\n"
-                                         "или метательного оружия.\n"
-                                         "Любой персонаж, желающий быстро реагировать\n"
-                                         "на опасность будет получать пользу от высокой ловкости."))
+            ("Ловкость определяет вашу физическую гибкость,\n"
+                                     "рефлексы и баланс. Обычно вы используете ловкость\n"
+                                     "для выполнения акробатических действий,\n"
+                                     "таких как удержание баланса при перемещении\n"
+                                     "по опасной поверхности, искривление вашего тела\n"
+                                     "при перемещении в узких пространствах,\n"
+                                     "поражение врага метательным снарядом или освобождение\n"
+                                     "из пут.\n"
+                                     "Разбойники и другие персонажи, носящие легкую броню,\n"
+                                     "предпочитают высокую ловкость, это помогает им\n"
+                                     "избежать вражеских атак. Персонаж может использовать\n"
+                                     "ловкость, когда атакует с лука, пращи\n"
+                                     "или метательного оружия.\n"
+                                     "Любой персонаж, желающий быстро реагировать\n"
+                                     "на опасность будет получать пользу от высокой ловкости."))
         player.tab.caractersistics.setTabText(player.tab.caractersistics.indexOf(player.tab.characteristics_dexterity),
-                                              _translate("MainWindow", "Ловкость"))
-        player.tab.save_giving_bodybuild_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.znachenie_bodybuild_labl.setText(_translate("MainWindow", "Значение:"))
-        player.tab.save_giving_bodybuild_labl.setText(_translate("MainWindow", "Спас.Бр."))
-        player.tab.mod_bodybuild_labl.setText(_translate("MainWindow", "Модификатор:"))
+                                              ("Ловкость"))
+        player.tab.save_giving_bodybuild_checkboxhaving.setText(("Владение"))
+        player.tab.znachenie_bodybuild_labl.setText(("Значение:"))
+        player.tab.save_giving_bodybuild_labl.setText(("Спас.Бр."))
+        player.tab.mod_bodybuild_labl.setText(("Модификатор:"))
         player.tab.description_bodybuild_labl.setText(
-                _translate("MainWindow", "Телосложение определяет ваше здоровье и крепость.\n"
-                                         "Обычно вы будете использовать телосложение что бы\n"
-                                         "задерживать дыхание, совершать долгие походы,\n"
-                                         "выполнять напряженную деятельность.\n"
-                                         "\n"
-                                         "Все персонажи получают выгоду\n"
-                                         " от большого телосложения."))
+            ("Телосложение определяет ваше здоровье и крепость.\n"
+                                     "Обычно вы будете использовать телосложение что бы\n"
+                                     "задерживать дыхание, совершать долгие походы,\n"
+                                     "выполнять напряженную деятельность.\n"
+                                     "\n"
+                                     "Все персонажи получают выгоду\n"
+                                     " от большого телосложения."))
         player.tab.caractersistics.setTabText(player.tab.caractersistics.indexOf(player.tab.characteristics_bodybuild),
-                                              _translate("MainWindow", "Телосложение"))
-        player.tab.mod_intellect_labl.setText(_translate("MainWindow", "Модификатор:"))
-        player.tab.analiz_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.save_giving_intellect_labl.setText(_translate("MainWindow", "Спас.Бр."))
-        player.tab.religion_labl.setText(_translate("MainWindow", "Религия"))
-        player.tab.history_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.history_labl.setText(_translate("MainWindow", "История"))
-        player.tab.history_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.magic_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.analiz_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.magic_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.analiz_labl.setText(_translate("MainWindow", "Анализ"))
-        player.tab.save_giving_intellect_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.nature_labl.setText(_translate("MainWindow", "Природа"))
-        player.tab.magic_labl.setText(_translate("MainWindow", "Магия"))
-        player.tab.znachenie_intellect_labl.setText(_translate("MainWindow", "Значение:"))
-        player.tab.nature_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.religion_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.nature_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.religion_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.description_intellect_labl.setText(_translate("MainWindow", "Интеллект описывает ваше психическое\n"
+                                              ("Телосложение"))
+        player.tab.mod_intellect_labl.setText(("Модификатор:"))
+        player.tab.analiz_checkboxhaving.setText(("Владение"))
+        player.tab.save_giving_intellect_labl.setText(("Спас.Бр."))
+        player.tab.religion_labl.setText(("Религия"))
+        player.tab.history_checkboxhaving.setText(("Владение"))
+        player.tab.history_labl.setText(("История"))
+        player.tab.history_checkbox.setText(("Компет."))
+        player.tab.magic_checkbox.setText(("Компет."))
+        player.tab.analiz_checkbox.setText(("Компет."))
+        player.tab.magic_checkboxhaving.setText(("Владение"))
+        player.tab.analiz_labl.setText(("Анализ"))
+        player.tab.save_giving_intellect_checkboxhaving.setText(("Владение"))
+        player.tab.nature_labl.setText(("Природа"))
+        player.tab.magic_labl.setText(("Магия"))
+        player.tab.znachenie_intellect_labl.setText(("Значение:"))
+        player.tab.nature_checkbox.setText(("Компет."))
+        player.tab.religion_checkbox.setText(("Компет."))
+        player.tab.nature_checkboxhaving.setText(("Владение"))
+        player.tab.religion_checkboxhaving.setText(("Владение"))
+        player.tab.description_intellect_labl.setText(("Интеллект описывает ваше психическое\n"
                                                                                "видение мира, ваше образование,\n"
                                                                                "способность к выявлению связей\n"
                                                                                "причина-следствие, память и использование\n"
@@ -2438,30 +2845,30 @@ def create_character(player):
                                                                                " нахождения ключей к головоломкам\n"
                                                                                " или сотворения тайных заклинаний."))
         player.tab.caractersistics.setTabText(player.tab.caractersistics.indexOf(player.tab.characteristics_intellect),
-                                              _translate("MainWindow", "Интеллект"))
-        player.tab.mod_wise_labl.setText(_translate("MainWindow", "Модификатор:"))
-        player.tab.mindfulness_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.save_giving_wise_labl.setText(_translate("MainWindow", "Спас.Бр."))
-        player.tab.care_of_animal_labl.setText(_translate("MainWindow", "Уход за\n"
+                                              ("Интеллект"))
+        player.tab.mod_wise_labl.setText(("Модификатор:"))
+        player.tab.mindfulness_checkboxhaving.setText(("Владение"))
+        player.tab.save_giving_wise_labl.setText(("Спас.Бр."))
+        player.tab.care_of_animal_labl.setText(("Уход за\n"
                                                                         "живтными"))
-        player.tab.living_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.living_labl.setText(_translate("MainWindow", "Выживание"))
-        player.tab.living_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.medicine_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.mindfulness_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.medicine_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.mindfulness_labl.setText(_translate("MainWindow", "Вниматель-\n"
+        player.tab.living_checkboxhaving.setText(("Владение"))
+        player.tab.living_labl.setText(("Выживание"))
+        player.tab.living_checkbox.setText(("Компет."))
+        player.tab.medicine_checkbox.setText(("Компет."))
+        player.tab.mindfulness_checkbox.setText(("Компет."))
+        player.tab.medicine_checkboxhaving.setText(("Владение"))
+        player.tab.mindfulness_labl.setText(("Вниматель-\n"
                                                                      "ность"))
-        player.tab.save_giving_wise_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.insight_labl.setText(_translate("MainWindow", "Проница-\n"
+        player.tab.save_giving_wise_checkboxhaving.setText(("Владение"))
+        player.tab.insight_labl.setText(("Проница-\n"
                                                                  "тельность."))
-        player.tab.medicine_labl.setText(_translate("MainWindow", "Медицина"))
-        player.tab.znachenie_wise_labl.setText(_translate("MainWindow", "Значение:"))
-        player.tab.insight_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.care_of_animal_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.insight_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.care_of_animal_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.description_wise_labl.setText(_translate("MainWindow", "Мудрость отражает то,\n"
+        player.tab.medicine_labl.setText(("Медицина"))
+        player.tab.znachenie_wise_labl.setText(("Значение:"))
+        player.tab.insight_checkbox.setText(("Компет."))
+        player.tab.care_of_animal_checkbox.setText(("Компет."))
+        player.tab.insight_checkboxhaving.setText(("Владение"))
+        player.tab.care_of_animal_checkboxhaving.setText(("Владение"))
+        player.tab.description_wise_labl.setText(("Мудрость отражает то,\n"
                                                                           "как вы приспособлены к своему\n"
                                                                           "окружению, представляет общую восприимчивость,\n"
                                                                           "интуицию, понимание и другие\n"
@@ -2476,27 +2883,27 @@ def create_character(player):
                                                                           "с помощью которой они могут направлять\n"
                                                                           "божественную силу и силы природы."))
         player.tab.caractersistics.setTabText(player.tab.caractersistics.indexOf(player.tab.characteristics_wise),
-                                              _translate("MainWindow", "Мудрость"))
-        player.tab.perfomance_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.save_giving_charisma_labl.setText(_translate("MainWindow", "Спас.Бр."))
-        player.tab.bullying_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.znachenie_charisma_labl.setText(_translate("MainWindow", "Значение:"))
-        player.tab.perfomance_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.fraud_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.save_giving_charisma_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.fraud_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.bullying_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.mod_charisma_labl.setText(_translate("MainWindow", "Модификатор:"))
-        player.tab.bullying_labl.setText(_translate("MainWindow", "Запугива-\n"
+                                              ("Мудрость"))
+        player.tab.perfomance_checkboxhaving.setText(("Владение"))
+        player.tab.save_giving_charisma_labl.setText(("Спас.Бр."))
+        player.tab.bullying_checkboxhaving.setText(("Владение"))
+        player.tab.znachenie_charisma_labl.setText(("Значение:"))
+        player.tab.perfomance_checkbox.setText(("Компет."))
+        player.tab.fraud_checkbox.setText(("Компет."))
+        player.tab.save_giving_charisma_checkboxhaving.setText(("Владение"))
+        player.tab.fraud_checkboxhaving.setText(("Владение"))
+        player.tab.bullying_checkbox.setText(("Компет."))
+        player.tab.mod_charisma_labl.setText(("Модификатор:"))
+        player.tab.bullying_labl.setText(("Запугива-\n"
                                                                   "ние"))
-        player.tab.conviction_labl.setText(_translate("MainWindow", "Убежде-\n"
+        player.tab.conviction_labl.setText(("Убежде-\n"
                                                                     "ние"))
-        player.tab.performance_labl.setText(_translate("MainWindow", "Выступле-\n"
+        player.tab.performance_labl.setText(("Выступле-\n"
                                                                      "ние"))
-        player.tab.fraud_labl.setText(_translate("MainWindow", "Обман"))
-        player.tab.conviction_checkbox.setText(_translate("MainWindow", "Компет."))
-        player.tab.conviction_checkboxhaving.setText(_translate("MainWindow", "Владение"))
-        player.tab.description_charisma_labl.setText(_translate("MainWindow", "Харизма определяет вашу способность\n"
+        player.tab.fraud_labl.setText(("Обман"))
+        player.tab.conviction_checkbox.setText(("Компет."))
+        player.tab.conviction_checkboxhaving.setText(("Владение"))
+        player.tab.description_charisma_labl.setText(("Харизма определяет вашу способность\n"
                                                                               "влиять на других, и прочность вашей личности.\n"
                                                                               "Высокая харизма дает сильное чувство\n"
                                                                               "мотива, в то время как низкая\n"
@@ -2512,193 +2919,341 @@ def create_character(player):
                                                                               "кто манипулирует магической мощью через\n"
                                                                               "чистую силу."))
         player.tab.caractersistics.setTabText(player.tab.caractersistics.indexOf(player.tab.characteristics_charisma),
-                                              _translate("MainWindow", "Харизма"))
-        player.tab.person_name.setText(_translate("MainWindow", "Абдулхабартат"))
+                                              ("Харизма"))
         player.tab.description_person.setItemText(player.tab.description_person.indexOf(player.tab.page_1),
-                                                  _translate("MainWindow", "Черты характера и мировозрение"))
+                                                  ("Черты характера и мировозрение"))
         player.tab.description_person.setItemText(player.tab.description_person.indexOf(player.tab.page_2),
-                                                  _translate("MainWindow", "Образ героя"))
+                                                  ("Образ героя"))
         player.tab.description_person.setItemText(player.tab.description_person.indexOf(player.tab.page_3),
-                                                  _translate("MainWindow", "Идеалы"))
+                                                  ("Идеалы"))
         player.tab.description_person.setItemText(player.tab.description_person.indexOf(player.tab.page_4),
-                                                  _translate("MainWindow", "Привязаности"))
+                                                  ("Привязаности"))
         player.tab.description_person.setItemText(player.tab.description_person.indexOf(player.tab.page_5),
-                                                  _translate("MainWindow", "Слабости"))
+                                                  ("Слабости"))
         player.tab.description_person.setItemText(player.tab.description_person.indexOf(player.tab.page_6),
-                                                  _translate("MainWindow", "Предыстория"))
+                                                  ("Предыстория"))
         player.tab.description_person.setItemText(player.tab.description_person.indexOf(player.tab.page_7),
-                                                  _translate("MainWindow", "Для заметок"))
+                                                  ("Для заметок"))
         player.tab.magic_list.setTabText(player.tab.magic_list.indexOf(player.tab.mag_lvl0),
-                                         _translate("MainWindow", "Заговоры"))
+                                         ("Заговоры"))
         player.tab.magic_list.setTabText(player.tab.magic_list.indexOf(player.tab.mag_lvl1),
-                                         _translate("MainWindow", "1"))
+                                         ("1"))
         player.tab.magic_list.setTabText(player.tab.magic_list.indexOf(player.tab.mag_lvl2),
-                                         _translate("MainWindow", "2"))
+                                         ("2"))
         player.tab.magic_list.setTabText(player.tab.magic_list.indexOf(player.tab.mag_lvl3),
-                                         _translate("MainWindow", "3"))
+                                         ("3"))
         player.tab.magic_list.setTabText(player.tab.magic_list.indexOf(player.tab.mag_lvl4),
-                                         _translate("MainWindow", "4"))
+                                         ("4"))
         player.tab.magic_list.setTabText(player.tab.magic_list.indexOf(player.tab.mag_lvl5),
-                                         _translate("MainWindow", "5"))
+                                         ("5"))
         player.tab.magic_list.setTabText(player.tab.magic_list.indexOf(player.tab.mag_lvl6),
-                                         _translate("MainWindow", "6"))
+                                         ("6"))
         player.tab.magic_list.setTabText(player.tab.magic_list.indexOf(player.tab.mag_lvl7),
-                                         _translate("MainWindow", "7"))
+                                         ("7"))
         player.tab.magic_list.setTabText(player.tab.magic_list.indexOf(player.tab.mag_lvl8),
-                                         _translate("MainWindow", "8"))
+                                         ("8"))
         player.tab.magic_list.setTabText(player.tab.magic_list.indexOf(player.tab.mag_lvl9),
-                                         _translate("MainWindow", "9"))
+                                         ("9"))
         player.tab.much_inventories.setTabText(player.tab.much_inventories.indexOf(player.tab.on_person_tab),
-                                               _translate("MainWindow", "Снаряжено"))
+                                               ("Снаряжено"))
         player.tab.much_inventories.setTabText(player.tab.much_inventories.indexOf(player.tab.inventory_tab),
-                                               _translate("MainWindow", "В инвент."))
+                                               ("В инвент."))
         player.tab.much_inventories.setTabText(player.tab.much_inventories.indexOf(player.tab.spechial_invent_tab),
-                                               _translate("MainWindow", "Спец.Предметы"))
-        player.tab.label_64.setText(_translate("MainWindow", "Класс:"))
-        player.tab.label_65.setText(_translate("MainWindow", "Уровень:"))
-        player.tab.label_66.setText(_translate("MainWindow", "Раса:"))
-        player.tab.label_68.setText(_translate("MainWindow", "Скорость:"))
-        player.tab.label_71.setText(_translate("MainWindow", "Кость хитов:"))
-        player.tab.up_character_checkbox.setText(_translate("MainWindow", "Вдохновление:"))
-        player.tab.label_73.setText(_translate("MainWindow", "Пас.Мудр\n"
+                                               ("Спец.Предметы"))
+        player.tab.label_64.setText(("Класс:"))
+        player.tab.label_65.setText(("Уровень:"))
+        player.tab.label_66.setText(("Раса:"))
+        player.tab.label_68.setText(("Скорость:"))
+        player.tab.label_71.setText(("Кость хитов:"))
+        player.tab.label_73.setText(("Пас.Мудр\n"
                                                              "(вним.):"))
-        player.tab.label_47.setText(_translate("MainWindow", "Класс закл.:"))
-        player.tab.label_48.setText(_translate("MainWindow", "Базовая хар-ка:"))
+        player.tab.label_47.setText(("Класс закл.:"))
+        player.tab.label_48.setText(("Базовая хар-ка:"))
         player.tab.state_person.setTabText(player.tab.state_person.indexOf(player.tab_23),
-                                           _translate("MainWindow", "Нету названия 2"))
-        player.tab.hp_labl.setText(_translate("MainWindow", "Здоровье:"))
-        player.tab.label_45.setText(_translate("MainWindow", "/"))
-        player.tab.initiative_labl.setText(_translate("MainWindow", "Инициатива:"))
-        player.tab.sl_spas_labl.setText(_translate("MainWindow", "Сл.Спасения:"))
-        player.tab.bon_attack_labl.setText(_translate("MainWindow", "Бон.Атаки:"))
-        player.tab.save_giving_of_death.setText(_translate("MainWindow", "Спас.Броски:"))
-        player.tab.save_giving_of_death_success.setText(_translate("MainWindow", "Успех:"))
-        player.tab.save_giving_of_death_fail.setText(_translate("MainWindow", "Провал:"))
-        player.tab.KD_labl.setText(_translate("MainWindow", "КД:"))
-        player.tab.xp_labl.setText(_translate("MainWindow", "Опыт:"))
-        player.tab.label_70.setText(_translate("MainWindow", "/"))
-        player.tab.bon_mast_labl.setText(_translate("MainWindow", "Бон.Маст:"))
+                                           ("Нету названия 2"))
+        player.tab.hp_labl.setText(("Здоровье:"))
+        player.tab.label_45.setText(("/"))
+        player.tab.initiative_labl.setText(("Инициатива:"))
+        player.tab.sl_spas_labl.setText(("Сл.Спасения:"))
+        player.tab.bon_attack_labl.setText(("Бон.Атаки:"))
+        player.tab.save_giving_of_death.setText(("Спас.Броски:"))
+        player.tab.save_giving_of_death_success.setText(("Успех:"))
+        player.tab.save_giving_of_death_fail.setText(("Провал:"))
+        player.tab.KD_labl.setText(("КД:"))
+        player.tab.xp_labl.setText(("Опыт:"))
+        player.tab.label_70.setText(("/"))
+        player.tab.bon_mast_labl.setText(("Бон.Маст:"))
         player.tab.state_person.setTabText(player.tab.state_person.indexOf(player.tab_22),
-                                           _translate("MainWindow", "Названия пока нету"))
-        player.tab.add_mag_button.setText(_translate("MainWindow", "Добавить"))
-        player.tab.red_view_mag_button.setText(_translate("MainWindow", "Редактировать/\n"
+                                           ("Названия пока нету"))
+        player.tab.add_mag_button.setText(("Добавить"))
+        player.tab.red_view_mag_button.setText(("Редактировать/\n"
                                                                         "Просмотреть"))
-        player.tab.delete_mag_button.setText(_translate("MainWindow", "Удалить"))
-        player.tab.label_14.setText(_translate("MainWindow", "/"))
-        player.tab.label_9.setText(_translate("MainWindow", "8:"))
-        player.tab.label_5.setText(_translate("MainWindow", "4:"))
-        player.tab.label_10.setText(_translate("MainWindow", "9:"))
-        player.tab.label_6.setText(_translate("MainWindow", "5:"))
-        player.tab.label_16.setText(_translate("MainWindow", "/"))
-        player.tab.label_12.setText(_translate("MainWindow", "/"))
-        player.tab.label_7.setText(_translate("MainWindow", "6:"))
-        player.tab.label_2.setText(_translate("MainWindow", "2:"))
-        player.tab.label_3.setText(_translate("MainWindow", "/"))
-        player.tab.label_17.setText(_translate("MainWindow", "/"))
-        player.tab.label_4.setText(_translate("MainWindow", "3:"))
-        player.tab.label_13.setText(_translate("MainWindow", "/"))
-        player.tab.label_11.setText(_translate("MainWindow", "/"))
-        player.tab.label_15.setText(_translate("MainWindow", "/"))
-        player.tab.label_8.setText(_translate("MainWindow", "7:"))
-        player.tab.label_18.setText(_translate("MainWindow", "/"))
-        player.tab.label.setText(_translate("MainWindow", "1:"))
-        player.tab.label_19.setText(_translate("MainWindow", "0:"))
-        player.tab.Usefull_buttons.setTitle(_translate("MainWindow", "Полезные кнопки"))
-        player.tab.calculator_button.setText(_translate("MainWindow", "Калькулятор"))
-        player.tab.time_button.setText(_translate("MainWindow", "Время"))
-        player.tab.add_mag_lvl0_2.setText(_translate("MainWindow", "Добавить"))
-        player.tab.pushButton_4.setText(_translate("MainWindow", "Изменить"))
-        player.tab.pushButton_5.setText(_translate("MainWindow", "Удалить"))
-        player.tab.characters_tab.setTabText(player.tab.characters_tab.indexOf(player.tab),
-                                             _translate("MainWindow", "Страница"))
-        player.tab.characters_tab.setTabText(player.tab.characters_tab.indexOf(player.tab),
-                                             _translate("MainWindow", "Страница"))
-        player.tab.character_menu.setTitle(_translate("MainWindow", "Персонаж"))
-        player.tab.book_menu.setTitle(_translate("MainWindow", "Книга"))
-        player.tab.instruments_menu.setTitle(_translate("MainWindow", "Инструменты"))
-        player.tab.instr_character.setTitle(_translate("MainWindow", "Создание персонажа/npc"))
-        player.tab.name_generator.setTitle(_translate("MainWindow", "Генератор имен"))
-        player.tab.bandit_name_generator.setTitle(_translate("MainWindow", "Генератор имен бандитов"))
-        player.tab.harakter_generator.setTitle(_translate("MainWindow", "Генератор характера"))
-        player.tab.country_name_generator.setTitle(_translate("MainWindow", "Генератор названия станы"))
-        player.tab.make_location.setTitle(_translate("MainWindow", "Создание локаций"))
-        player.tab.home_generator.setTitle(_translate("MainWindow", "Генератор Таверн"))
-        player.tab.city_generator.setTitle(_translate("MainWindow", "Генератор карты города"))
-        player.tab.usefull_menu.setTitle(_translate("MainWindow", "Бестиарий/Предметы/Заклинания"))
-        player.tab.bestiary.setTitle(_translate("MainWindow", "Бестиарий"))
-        player.tab.items.setTitle(_translate("MainWindow", "Предметы"))
-        player.tab.magic_items.setTitle(_translate("MainWindow", "Маг. Предметы"))
-        player.tab.normal_items.setTitle(_translate("MainWindow", "Обычное оружие"))
-        player.tab.magic.setTitle(_translate("MainWindow", "Заклинания"))
-        player.tab.cubes.setTitle(_translate("MainWindow", "Кубики"))
-        player.tab.configs.setTitle(_translate("MainWindow", "Настройки"))
-        player.tab.vk_group.setTitle(_translate("MainWindow", "Вк группа"))
-        player.tab.help.setTitle(_translate("MainWindow", "Помощь"))
-        player.tab.add_character.setText(_translate("MainWindow", "Добавить"))
-        player.tab.add_character.setShortcut(_translate("MainWindow", "Ctrl+N"))
-        player.tab.load_character.setText(_translate("MainWindow", "Загрузить"))
-        player.tab.load_character.setShortcut(_translate("MainWindow", "Ctrl+L"))
-        player.tab.save_character.setText(_translate("MainWindow", "Сохранить всех"))
-        player.tab.save_character.setShortcut(_translate("MainWindow", "Ctrl+S"))
-        player.tab.master_book.setText(_translate("MainWindow", "Книга Мастера(offline)"))
-        player.tab.master_book.setShortcut(_translate("MainWindow", "Ctrl+M"))
-        player.tab.study_book.setText(_translate("MainWindow", "Книга Игрока(Offline)"))
-        player.tab.study_book.setShortcut(_translate("MainWindow", "Ctrl+P"))
-        player.tab.sounds.setText(_translate("MainWindow", "Звуковое сопровождение"))
-        player.tab.actionrpgtinker_com_country_name_generator.setText(_translate("MainWindow", "rpgtinker.com"))
-        player.tab.actionAutoNAME_AutoREALM_name_generator.setText(_translate("MainWindow", "AutoNAME(AutoREALM)"))
-        player.tab.actiontentaculus_ru_name_generator.setText(_translate("MainWindow", "tentaculus.ru"))
-        player.tab.actionstormtower_ru_bandit_name_generator.setText(_translate("MainWindow", "stormtower.ru"))
-        player.tab.actionrandomall_ru_harakter_generator.setText(_translate("MainWindow", "randomall.ru"))
-        player.tab.actionrandomall_ru_county_name_generator.setText(_translate("MainWindow", "randomall.ru"))
-        player.tab.actionstormtower_ru_home_generator.setText(_translate("MainWindow", "stormtower.ru(Описание)"))
-        player.tab.actionCampaign_Cartographer_3_CC3_city_generator.setText(
-                _translate("MainWindow", "Campaign Cartographer 3(CC3)"))
-        player.tab.actionAutoREALM_city_generator.setText(_translate("MainWindow", "AutoREALM"))
-        player.tab.actionpyromancers_com_city_generator.setText(_translate("MainWindow", "pyromancers.com"))
-        player.tab.actionwatabou_itch_io_city_generator.setText(_translate("MainWindow", "watabou.itch.io"))
-        player.tab.actiondungeon_su_bestiary.setText(_translate("MainWindow", "dungeon.su"))
-        player.tab.actiontentaculus_ru_bestiary.setText(_translate("MainWindow", "tentaculus.ru"))
-        player.tab.actiondungeon_su_magic_items.setText(_translate("MainWindow", "dungeon.su"))
-        player.tab.actiontentaculus_ru_magic_items.setText(_translate("MainWindow", "tentaculus.ru"))
-        player.tab.actiondungeon_su_normal_items.setText(_translate("MainWindow", "dungeon.su"))
-        player.tab.actiondnd5_club_normal_items.setText(_translate("MainWindow", "dnd5.club"))
-        player.tab.actiondungeon_su_magic.setText(_translate("MainWindow", "dungeon.su"))
-        player.tab.actiontentaculus_ru_magic.setText(_translate("MainWindow", "tentaculus.ru"))
-        player.tab.action1.setText(_translate("MainWindow", "1"))
-        player.tab.load_character.setObjectName("load_character")
-        player.tab.save_character = QtWidgets.QAction(MainWindow)
-        player.tab.save_character.setObjectName("save_character")
-        player.tab.master_book = QtWidgets.QAction(MainWindow)
-        player.tab.master_book.setObjectName("master_book")
-        player.tab.study_book = QtWidgets.QAction(MainWindow)
-        player.tab.study_book.setObjectName("study_book")
-        player.tab.sounds = QtWidgets.QAction(MainWindow)
-        player.tab.sounds.setObjectName("sounds")
-        player.tab.actionrpgtinker_com_country_name_generator = QtWidgets.QAction(MainWindow)
-        player.tab.actionrpgtinker_com_country_name_generator.setObjectName(
-                "actionrpgtinker_com_country_name_generator")
-        player.tab.actionAutoNAME_AutoREALM_name_generator = QtWidgets.QAction(MainWindow)
-        player.tab.actionAutoNAME_AutoREALM_name_generator.setObjectName("actionAutoNAME_AutoREALM_name_generator")
-        player.tab.actiontentaculus_ru_name_generator = QtWidgets.QAction(MainWindow)
-        player.tab.actiontentaculus_ru_name_generator.setObjectName("actiontentaculus_ru_name_generator")
-        player.tab.actionstormtower_ru_bandit_name_generator = QtWidgets.QAction(MainWindow)
-        player.tab.actionstormtower_ru_bandit_name_generator.setObjectName("actionstormtower_ru_bandit_name_generator")
-        player.tab.actionrandomall_ru_harakter_generator = QtWidgets.QAction(MainWindow)
-        player.tab.actionrandomall_ru_harakter_generator.setObjectName("actionrandomall_ru_harakter_generator")
-        player.tab.actionrandomall_ru_county_name_generator = QtWidgets.QAction(MainWindow)
-        player.tab.actionrandomall_ru_county_name_generator.setObjectName("actionrandomall_ru_county_name_generator")
-        player.tab.actionstormtower_ru_home_generator = QtWidgets.QAction(MainWindow)
-        player.tab.actionstormtower_ru_home_generator.setObjectName("actionstormtower_ru_home_generator")
-        player.tab.actionCampaign_Cartographer_3_CC3_city_generator = QtWidgets.QAction(MainWindow)
-        player.tab.actionCampaign_Cartographer_3_CC3_city_generator.setObjectName(
-                "actionCampaign_Cartographer_3_CC3_city_generator")
-        player.tab.actionAutoREALM_city_generator = QtWidgets.QAction(MainWindow)
-        player.tab.actionAutoREALM_city_generator.setObjectName("actionAutoREALM_city_generator")
-        player.tab.actionpyromancers_com_city_generator = QtWidgets.QAction(MainWindow)
-        player.tab.actionpyromancers_com_city_generator.setObjectName("actionpyromancers_com_city_generator")
-        player.tab.actionwatabou_itch_io_city_generator = QtWidgets.QAction(MainWindow)
-        player.tab.actionwatabou_itch_io_city_generator.setObjectName("actionwatabou_itch_io_city_generator")
-        player.tab.actiondungeon_su_bestiary = QtWidgets.QAction(MainWindow)
+        player.tab.delete_mag_button.setText(("Удалить"))
+        player.tab.label_14.setText(("/"))
+        player.tab.label_9.setText(("8:"))
+        player.tab.label_5.setText(("4:"))
+        player.tab.label_10.setText(("9:"))
+        player.tab.label_6.setText(("5:"))
+        player.tab.label_16.setText(("/"))
+        player.tab.label_12.setText(("/"))
+        player.tab.label_7.setText(("6:"))
+        player.tab.label_2.setText(("2:"))
+        player.tab.label_3.setText(("/"))
+        player.tab.label_17.setText(("/"))
+        player.tab.label_4.setText(("3:"))
+        player.tab.label_13.setText(("/"))
+        player.tab.label_11.setText(("/"))
+        player.tab.label_15.setText(("/"))
+        player.tab.label_8.setText(("7:"))
+        player.tab.label_18.setText(("/"))
+        player.tab.label.setText(("1:"))
+        player.tab.label_19.setText(("0:"))
+        player.tab.Usefull_buttons.setTitle(("Полезные кнопки"))
+        player.tab.calculator_button.setText(("Калькулятор"))
+        player.tab.time_button.setText(("Время"))
+        player.tab.add_to_invent_button.setText(("Добавить"))
+        player.tab.edit_item_list.setText(("Изменить"))
+        player.tab.delete_invent_button.setText(("Удалить"))
+        player.tab.label_21 = QtWidgets.QLabel(player.tab.gridLayoutWidget_7)
+        player.tab.label_21.setObjectName("label_21")
+        player.tab.gridLayout.addWidget(player.tab.label_21, 0, 2, 1, 1)
+        player.tab.label_21.setText("/")
+        player.tab.up_character_checkbox = QtWidgets.QCheckBox(player.tab_23)
+        player.tab.up_character_checkbox.setGeometry(QtCore.QRect(-1, 245, 111, 20))
+        font = QtGui.QFont()
+        font.setPointSize(9)
+        player.tab.up_character_checkbox.setFont(font)
+        player.tab.up_character_checkbox.setLayoutDirection(QtCore.Qt.RightToLeft)
+        player.tab.up_character_checkbox.setAutoFillBackground(False)
+        player.tab.up_character_checkbox.setAutoExclusive(False)
+        player.tab.up_character_checkbox.setTristate(False)
+        player.tab.up_character_checkbox.setObjectName("up_character_checkbox")
+        player.tab.up_character_checkbox.setText(("Вдохновление:"))
+        player.tab.life_target = QtWidgets.QTextEdit(player.tab)
+        player.tab.life_target.setGeometry(QtCore.QRect(540, 0, 451, 61))
+        player.tab.life_target.setAutoFillBackground(True)
+        player.tab.life_target.setReadOnly(True)
+        player.tab.life_target.setObjectName("life_target")
+        player.tab.label_22 = QtWidgets.QLabel(player.tab)
+        player.tab.label_22.setGeometry(QtCore.QRect(380, 17, 151, 31))
+        font = QtGui.QFont()
+        font.setFamily("Segoe Script")
+        font.setPointSize(16)
+        font.setBold(False)
+        font.setItalic(False)
+        font.setWeight(50)
+        font.setStrikeOut(False)
+        font.setStyleStrategy(QtGui.QFont.PreferAntialias)
+        player.tab.label_22.setFont(font)
+        player.tab.label_22.setObjectName("label_22")
+        player.tab.label_22.setText(("Цель жизни:"))
 
-"""
+        # (name, race, clas, life_targ, strong, dexterity, bodybuild, intellcect, wise, charisma)
+        player.tab.person_name.setText((text))
+        #player.tab.rase_combobox.
+        # player.tab.class_combobox
+        player.tab.life_target.setText(life_targ)
+        player.tab.strong_field.setText(strong)
+        player.tab.dexterity_field.setText(dexterity)
+        player.tab.bodybuild_field.setText(bodybuild)
+        player.tab.intellect_field.setText(intellcect)
+        player.tab.znachenie_wise_field.setText(wise)
+        player.tab.znachenie_charisma_field.setText(charisma)
+
+
+        self.characters_tab.addTab(player.tab, text)
+
+
+        def add_in_mag_list(self):
+            ui2 = win_spell(self)
+            ui2.show()
+
+        def red_view_mag(self):
+
+            ui2 = win_spell(self)
+
+            index = self.magic_list.currentIndex()
+            #current_lvl_spell = self.magic_list.widget(index)
+            current_lvl_spell1 = self.magic_list.tabText(index)
+
+            codes = {"Заговоры": "list_mag_lvl0", "1": "list_mag_lvl1", "2": "list_mag_lvl2", "3": "list_mag_lvl3",
+                     "4": "list_mag_lvl4", "5": "list_mag_lvl5", "6": "list_mag_lvl6", "7": "list_mag_lvl7",
+                     "8": "list_mag_lvl8", "9": "list_mag_lvl9"}
+            l = codes.get(current_lvl_spell1)
+
+            if l == "list_mag_lvl0":
+                current_spell = self.list_mag_lvl0.currentItem()
+            if l == "list_mag_lvl1":
+                current_spell = self.list_mag_lvl1.currentItem()
+            if l == "list_mag_lvl2":
+                current_spell = self.list_mag_lvl2.currentItem()
+            if l == "list_mag_lvl3":
+                current_spell = self.list_mag_lvl3.currentItem()
+            if l == "list_mag_lvl4":
+                current_spell = self.list_mag_lvl4.currentItem()
+            if l == "list_mag_lvl5":
+                current_spell = self.list_mag_lvl5.currentItem()
+            if l == "list_mag_lvl6":
+                current_spell = self.list_mag_lvl6.currentItem()
+            if l == "list_mag_lvl7":
+                current_spell = self.list_mag_lvl7.currentItem()
+            if l == "list_mag_lvl8":
+                current_spell = self.list_mag_lvl8.currentItem()
+            if l == "list_mag_lvl9":
+                current_spell = self.list_mag_lvl9.currentItem()
+
+            file_path = "configs\\spells\\" + current_spell.text() + ".txt"
+            if file_path != "":
+                if os.path.exists(file_path) == True:
+                    file = open(file_path, "r")
+                    lines = file.read().split(" splitter ")
+                    for i in lines:
+                        if i == '':
+                            lines.remove('')
+                    print(lines)
+                    ui2.name_of_spell.setText(lines[0])
+                    ui2.school_of_spell.setText(lines[2])
+                    ui2.time_to_cast.setText(lines[3])
+                    ui2.distantion.setText(lines[4])
+                    ui2.intems_to_spell.setText(lines[5])
+                    ui2.spell_lives.setText(lines[6])
+                    ui2.classes_cast.setText(lines[7])
+                    ui2.source_of_spell.setText(lines[8])
+                    ui2.spells_descriptions.setText(lines[9])
+                    ui2.spell_lvl.setCurrentIndex(index)
+
+                ui2.add_spell_button.clicked.connect(lambda: ui2.access_add_spell(ui2.parent))
+                ui2.show()
+
+        def delete_spell(self):
+            index = self.magic_list.currentIndex()
+            # current_lvl_spell = self.magic_list.widget(index)
+            current_lvl_spell1 = self.magic_list.tabText(index)
+
+            codes = {"Заговоры": "list_mag_lvl0", "1": "list_mag_lvl1", "2": "list_mag_lvl2", "3": "list_mag_lvl3",
+                     "4": "list_mag_lvl4", "5": "list_mag_lvl5", "6": "list_mag_lvl6", "7": "list_mag_lvl7",
+                     "8": "list_mag_lvl8", "9": "list_mag_lvl9"}
+            l = codes.get(current_lvl_spell1)
+            if l == "list_mag_lvl0":
+                curent = self.list_mag_lvl0.currentRow()
+                self.list_mag_lvl0.takeItem(int(curent))
+            if l == "list_mag_lvl1":
+                curent = self.list_mag_lvl1.currentRow()
+                self.list_mag_lvl1.takeItem(int(curent))
+            if l == "list_mag_lvl2":
+                curent = self.list_mag_lvl2.currentRow()
+                self.list_mag_lvl2.takeItem(int(curent))
+            if l == "list_mag_lvl3":
+                curent = self.list_mag_lvl3.currentRow()
+                self.list_mag_lvl3.takeItem(int(curent))
+            if l == "list_mag_lvl4":
+                curent = self.list_mag_lvl4.currentRow()
+                self.list_mag_lvl4.takeItem(int(curent))
+            if l == "list_mag_lvl5":
+                curent = self.list_mag_lvl5.currentRow()
+                self.list_mag_lvl5.takeItem(int(curent))
+            if l == "list_mag_lvl6":
+                curent = self.list_mag_lvl6.currentRow()
+                self.list_mag_lvl6.takeItem(int(curent))
+            if l == "list_mag_lvl7":
+                curent = self.list_mag_lvl7.currentRow()
+                self.list_mag_lvl7.takeItem(int(curent))
+            if l == "list_mag_lvl8":
+                curent = self.list_mag_lvl8.currentRow()
+                self.list_mag_lvl8.takeItem(int(curent))
+            if l == "list_mag_lvl9":
+                curent = self.list_mag_lvl9.currentRow()
+                self.list_mag_lvl9.takeItem(int(curent))
+
+
+        player.tab.add_mag_button.clicked.connect(lambda: add_in_mag_list(player.tab))
+        player.tab.red_view_mag_button.clicked.connect(lambda: red_view_mag(player.tab))
+        player.tab.delete_mag_button.clicked.connect(lambda: delete_spell(player.tab))
+
+        player.tab.list_mag_lvl0.doubleClicked.connect(lambda: red_view_mag(player.tab))
+        player.tab.list_mag_lvl1.doubleClicked.connect(lambda: red_view_mag(player.tab))
+        player.tab.list_mag_lvl2.doubleClicked.connect(lambda: red_view_mag(player.tab))
+        player.tab.list_mag_lvl3.doubleClicked.connect(lambda: red_view_mag(player.tab))
+        player.tab.list_mag_lvl4.doubleClicked.connect(lambda: red_view_mag(player.tab))
+        player.tab.list_mag_lvl5.doubleClicked.connect(lambda: red_view_mag(player.tab))
+        player.tab.list_mag_lvl6.doubleClicked.connect(lambda: red_view_mag(player.tab))
+        player.tab.list_mag_lvl7.doubleClicked.connect(lambda: red_view_mag(player.tab))
+        player.tab.list_mag_lvl8.doubleClicked.connect(lambda: red_view_mag(player.tab))
+        player.tab.list_mag_lvl9.doubleClicked.connect(lambda: red_view_mag(player.tab))
+
+        player.tab.add_to_invent_button.clicked.connect(lambda: add_in_invent_list(player.tab))
+        player.tab.edit_item_list.clicked.connect(lambda: edit_item_list(player.tab))
+        player.tab.delete_invent_button.clicked.connect(lambda: delete_invent_item(player.tab))
+
+        def add_in_invent_list(self):
+            ui2 = win_inventory(self)
+            ui2.show()
+
+
+        def edit_item_list(self):
+            ui2 = win_inventory(self)
+
+            index = self.much_inventories.currentIndex()
+            # current_lvl_spell = self.magic_list.widget(index)
+            curr_item = self.much_inventories.tabText(index)
+
+            codes = {"Снаряжено": "on_person_list", "В инвент.": "in_inventory_list",
+                     "Умен, особ, владен.": "can_have_invent_list", "Спец.Предметы": "spechial_invent_list"}
+            l = codes.get(curr_item)
+
+            if l == "on_person_list":
+                curent_this_shit = self.on_person_list.currentItem()
+            if l == "in_inventory_list":
+                curent_this_shit = self.in_inventory_list.currentItem()
+            if l == "can_have_invent_list":
+                curent_this_shit = self.can_have_invent_list.currentItem()
+            if l == "spechial_invent_list":
+                curent_this_shit = self.spechial_invent_list.currentItem()
+
+            file_path = "configs\\spells\\" + curent_this_shit.text() + ".txt"
+            if file_path != "":
+                if os.path.exists(file_path) == True:
+                    file = open(file_path, "r")
+                    lines = file.read().split(" splitter ")
+                    for i in lines:
+                        if i == '':
+                            lines.remove('')
+                    print(lines)
+                    ui2.add_item_field.setText(lines[0])
+                    ui2.wher_it_be_field.setCurrentIndex(index)
+                    ui2.quality_field.setText(lines[3])
+                    ui2.source_of_item.setText(lines[4])
+                    ui2.description_of_item_field.setText(lines[5])
+
+                ui2.access_add_invent.clicked.connect(lambda: ui2.access_add_item(ui2.parent))
+                ui2.show()
+
+        def delete_invent_item(self):
+            index = self.much_inventories.currentIndex()
+            print(index)
+            # current_lvl_spell = self.much_inventories.widget(index)
+            much_inventories_tab = self.much_inventories.tabText(index)
+            print(much_inventories_tab)
+
+            codes = {"Снаряжено": "on_person_list", "В инвент.": "in_inventory_list", "Умен, особ, владен.": "can_have_invent_list", "Спец.Предметы": "spechial_invent_list"}
+            l = codes.get(much_inventories_tab)
+            print(l)
+            if l == "on_person_list":
+                curent = self.on_person_list.currentRow()
+                self.on_person_list.takeItem(int(curent))
+            if l == "in_inventory_list":
+                curent = self.in_inventory_list.currentRow()
+                self.in_inventory_list.takeItem(int(curent))
+            if l == "can_have_invent_list":
+                curent = self.can_have_invent_list.currentRow()
+                self.can_have_invent_list.takeItem(int(curent))
+            if l == "spechial_invent_list":
+                curent = self.spechial_invent_list.currentRow()
+                self.spechial_invent_list.takeItem(int(curent))
+
+
+if __name__ == "__main__":
+    app = QtWidgets.QApplication(sys.argv)
+    ui1 = main_ui()
+    ui1.show()
+    sys.exit(app.exec_())
